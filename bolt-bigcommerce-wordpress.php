@@ -313,8 +313,10 @@
   }
   // TODO: add information about selected shipment method
   // TODO: add information about payment and set order status
+  
   //get data from bigcommerce cart ...
   $cart = bigcommerce_api_v3("/carts/{$bigcommerce_cart_id}");
+  log_write("bigcommerce cart ".print_r($cart,true));
   
   //... and Bolt transaction
   $bolt_client = new \BoltPay\ApiClient([
@@ -323,16 +325,35 @@
   ]);
 
   $bolt_transaction = $bolt_client->getTransactionDetails( $bolt_reference ) -> getBody();
+  log_write("bolt_transaction ".print_r($bolt_transaction,true));
 
   $bolt_billing_address = $bolt_transaction->order->cart->billing_address;
  
   $order = new stdClass();
-  $order->total_ex_tax = $cart->data->base_amount;
+  
   $order->subtotal_ex_tax = $cart->data->base_amount;
   $order->subtotal_inc_tax = $cart->data->base_amount;
-  $order->total_inc_tax = $cart->data->base_amount;
-  $order->base_shipping_cost = 0;
+  
+  $shipping_cost = $bolt_transaction->order->cart->shipments[0]->cost->amount / 100;
+  
+  $order->total_inc_tax = $cart->data->base_amount + $shipping_cost;
+  $order->total_ex_tax = $cart->data->base_amount + $shipping_cost;
+  
+  $order->shipping_cost_ex_tax = $shipping_cost;
+  $order->shipping_cost_inc_tax = $shipping_cost;
+  $order->base_shipping_cost = $shipping_cost;
   $order->order_is_digital = false;
+/*  
+  <subtotal_ex_tax>34.9500</subtotal_ex_tax>
+  <subtotal_inc_tax>34.9500</subtotal_inc_tax>
+  
+    <base_shipping_cost>10.0000</base_shipping_cost>
+    <shipping_cost_ex_tax>10.0000</shipping_cost_ex_tax>
+    <shipping_cost_inc_tax>10.0000</shipping_cost_inc_tax>
+
+    <total_ex_tax>44.9500</total_ex_tax>
+    <total_inc_tax>44.9500</total_inc_tax>
+  */
 
   $order->billing_address = new stdClass();
   $order->billing_address->first_name   = $bolt_billing_address->first_name;
@@ -349,6 +370,12 @@
   $order->billing_address->country_iso2 = $bolt_billing_address->country_code;
   $order->billing_address->phone        = $bolt_billing_address->phone_number;
   $order->billing_address->email        = $bolt_billing_address->email_address;
+  
+  // add shipping method (text)
+  $order->shipping_addresses[] = clone $order->billing_address;
+  $order->shipping_addresses[0]->shipping_method = $bolt_transaction->order->cart->shipments[0]->service;
+  
+  
   $order->products = array();
 
   foreach ($cart->data->line_items->physical_items as $item) {
