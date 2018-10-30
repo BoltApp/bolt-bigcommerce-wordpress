@@ -58,25 +58,22 @@
  function bolt_endpoint_handler() {
   $hmacHeader = @$_SERVER['HTTP_X_BOLT_HMAC_SHA256'];
   log_write("bolt_endpoint_handler");
-  log_write("nhmacHeader='$hmacHeader' signingSecret='".\BoltPay\Bolt::$signingSecret."'");
   $signatureVerifier = new \BoltPay\SignatureVerifier(
      \BoltPay\Bolt::$signingSecret
   ); 
   $bolt_data_json = file_get_contents('php://input');
-  log_write($bolt_data_json);
   $bolt_data = json_decode($bolt_data_json);
   log_write(print_r($bolt_data,true));
  
-  if (!$signatureVerifier->verifySignature($bolt_data_json, $hmacHeader)) {
-   log_write("error:{$hmacHeader}");
+  if ( !$signatureVerifier->verifySignature( $bolt_data_json, $hmacHeader ) ) {
    throw new Exception("Failed HMAC Authentication");
   }
  
   //create new order
   $order_reference = $bolt_data->order;
-  $bigcommerce_cart_id = get_option( "bolt_cart_id_".$order_reference);
+  $bigcommerce_cart_id = get_option( "bolt_cart_id_".$order_reference );
   $bolt_reference = $bolt_data->reference;
-  $response = bolt_create_order($bolt_reference,$bigcommerce_cart_id);
+  $response = bolt_create_order( $bolt_reference, $bigcommerce_cart_id, $bolt_data );
  
   //empty cart
   bigcommerce_api_v3("/carts/{$bigcommerce_cart_id}","DELETE");
@@ -280,10 +277,40 @@
 </script>
 <?php
  }
+ function bolt_order_set_status ( $order_id, $bolt_type, $bolt_status="" ) {
+  $new_status_id = 0;
+  if ( "rejected_reversible" == $bolt_type ) {
+   $new_status_id = 12; // Manual Verification Required
+   //$custom_status = "Recently Rejected";
+  } else if ( ( "payment" == $bolt_type ) && ( "completed" == $bolt_status) ) {
+   $new_status_id = 11; // Awaiting Fulfillment
+  } else if ( "rejected_irreversible" == $bolt_type ) {
+   $new_status_id = 6; // Declined
+  }
  
+  //read the old status
+  $order = Client::getCollection("/orders/{$order_id}");
+  log_write("query '/order_status/{$order_id}'");
+  log_write("answer".print_r($order,true));
+
+  if ( $new_status_id && $order->id != $new_status_id) {
+   log_write("Order {$order_id} Change status From {$order->status_id} ({$order->status}) TO {$new_status_id} {$custom_status} ");
+   Client::updateResource( "/orders/{$order_id}", array( "status_id" => $new_status_id ) );
+  }
+ }
+  
  //create order in bigcommerce
- function bolt_create_order($bolt_reference,$bigcommerce_cart_id) {
-  // TODO: prevent re-creation order
+ function bolt_create_order( $bolt_reference, $bigcommerce_cart_id, $bolt_data) {
+  // prevent re-creation order
+  $bc_order_id = get_option( "bolt_order_{$bolt_reference}" );
+  if ($bc_order_id) {
+   log_write("prevent re-creation order");
+   bolt_order_set_status( $bc_order_id, $bolt_data->type, $bolt_data->status );
+   $response = new stdClass();
+   $response -> status = "success";
+   $response -> created_objects -> merchant_order_ref = $bc_order_id;   
+   return $response;
+  }
   // TODO: add information about selected shipment method
   // TODO: add information about payment and set order status
   //get data from bigcommerce cart ...
@@ -343,6 +370,8 @@
    log_write("!!");
    log_write($ex);
   }
+  //save Bigcommerce order id
+  add_option( "bolt_order_{$bolt_reference}", $bc_order->id);
 
   $response = new stdClass();
   $response -> status = "success";
