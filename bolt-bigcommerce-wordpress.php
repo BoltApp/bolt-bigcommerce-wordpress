@@ -14,6 +14,7 @@
  * License:           GPL-3.0
  * License URI:       http://www.gnu.org/licenses/gpl-3.0.txt
  */
+ const BC_API="v2"; // can use v3 server-to-server checkout APIs or not
  
  //Bigcommerce API v2
  use Bigcommerce\Api\Resource;
@@ -27,15 +28,17 @@
  //temporary solution for using Bigcommerce API v3
  //necessary make changes in  bigcommerce-for-wordpress-master/vendor/bigcommerce/api/src/Bigcommerce/Api/Client.php
  //add first line in function mapCollection "return $object;". It's line 349
- function bigcommerce_api_v3( $method, $type="GET" ) {
+ function bigcommerce_api_v3( $method, $type="GET", $body="" ) {
   Client::$api_path = str_replace("/v2","/v3",Client::$api_path);
   if ($type=="GET") {
    $result = Client::getCollection($method);
   } else if ($type=="DELETE"){
    $result = Client::deleteResource($method);
+  } else if ($type=="POST") {
+   $result = Client::createResource($method, $body);
   }
   Client::$api_path = str_replace("/v3","/v2",Client::$api_path);
-  log_write("api v3 method={$method} type={$type} result ".print_r($result,true));
+  //log_write("api v3 method={$method} type={$type} result ".print_r($result,true));
   return $result;
  }
  
@@ -100,7 +103,7 @@
   $post_code = $bolt_order->shipping_address->postal_code;
   $region = $bolt_order->shipping_address->region;
  
-  // TODO: work with states  
+  // TODO: work with states maybe https://developer.bigcommerce.com/api/v3/#/reference/checkout/early-access-server-to-server-checkout/add-a-new-consignment-to-checkout 
   // TODO: think about cache /shipping/zones
   $shipping_zones = Client::getCollection('/shipping/zones');
   
@@ -157,13 +160,13 @@
  //code "bolt_cart_button($cart);" added in bigcommerce-for-wordpress-master/public-views/cart.php
  //before "</footer>"
  function bolt_cart_button($bigcommerce_cart) {
-  //create bolt order from bigcommerce cart
+  $currency_code = get_option( BigCommerce\Settings\Currency::CURRENCY_CODE, '' );
+  
   $order_reference = uniqid('BLT',false);
   $cart = array(
    "order_reference" => $order_reference,
    "display_id"      => $order_reference,
-   // TODO: work with different currency
-   "currency"        => "USD", //!!!!,
+   "currency"        => $currency_code,
    "total_amount"    => round( $bigcommerce_cart["cart_amount"]["raw"] * 100 ),
    "tax_amount"      => 0,
    // TODO: work with discounts
@@ -183,6 +186,7 @@
    );
   }
   $cartData = array("cart" => $cart);
+  //print_r($cartData);exit;
 
   $client = new \BoltPay\ApiClient([
     'api_key' => \BoltPay\Bolt::$apiKey,
@@ -195,6 +199,7 @@
   //it uses when we create order in bigcommerce (function bolt_create_order)
   //todo: think about better storage
   $updated = update_option( "bolt_cart_id_".$order_reference, $bigcommerce_cart["cart_id"]);
+  log_write( "cart_id={$bigcommerce_cart["cart_id"]}" );
  //Sample JS CODE
  // TODO: move it to the template
  ?>
@@ -302,6 +307,7 @@
  //create order in bigcommerce
  function bolt_create_order( $bolt_reference, $bigcommerce_cart_id, $bolt_data) {
   // prevent re-creation order
+  log_write("bolt_create_order( {$bolt_reference}, {$bigcommerce_cart_id})");
   $bc_order_id = get_option( "bolt_order_{$bolt_reference}" );
   if ($bc_order_id) {
    log_write("prevent re-creation order");
@@ -311,26 +317,90 @@
    $response -> created_objects -> merchant_order_ref = $bc_order_id;   
    return $response;
   }
-  // TODO: add information about selected shipment method
-  // TODO: add information about payment and set order status
-  
-  //get data from bigcommerce cart ...
-  $cart = bigcommerce_api_v3("/carts/{$bigcommerce_cart_id}");
-  log_write("bigcommerce cart ".print_r($cart,true));
-  
-  //... and Bolt transaction
+  //get data from Bolt transaction
   $bolt_client = new \BoltPay\ApiClient([
     'api_key' => \BoltPay\Bolt::$apiKey,
     'is_sandbox' => \BoltPay\Bolt::$isSandboxMode
   ]);
-
   $bolt_transaction = $bolt_client->getTransactionDetails( $bolt_reference ) -> getBody();
   log_write("bolt_transaction ".print_r($bolt_transaction,true));
-
-  $bolt_billing_address = $bolt_transaction->order->cart->billing_address;
- 
-  $order = new stdClass();
   
+  $bolt_billing_address = $bolt_transaction->order->cart->billing_address;
+  log_write(print_r($bolt_billing_address,true));
+  
+  //get data from bigcommerce cart
+  $cart = bigcommerce_api_v3("/carts/{$bigcommerce_cart_id}");
+  log_write("bigcommerce cart ".print_r($cart,true));
+  
+  
+  if ( BC_API == "v3" ) {
+   //files names differ between BC v2 and v3 API. For example country_code <>country_iso2
+   $billing_address = new stdClass();
+   $billing_address->first_name        = $bolt_billing_address->first_name;
+   $billing_address->last_name         = $bolt_billing_address->last_name;
+   // TODO: find company in bolt form
+   $billing_address->company           = "";
+   $billing_address->address1          = $bolt_billing_address->street_address1;
+   $billing_address->address2          = "";
+   $billing_address->city              = $bolt_billing_address->locality;
+   $billing_address->state_or_province = $bolt_billing_address->region;
+   $billing_address->postal_code       = $bolt_billing_address->postal_code;
+   $billing_address->country           = $bolt_billing_address->country;
+   $billing_address->country_code      = $bolt_billing_address->country_code;
+   $billing_address->phone             = $bolt_billing_address->phone_number;
+   $billing_address->email             = $bolt_billing_address->email_address;
+   //TODO: what happens if BC cart already differ from checkout bolt cart
+   //add billing address
+   $checkout = bigcommerce_api_v3 ( "/checkouts/{$bigcommerce_cart_id}/billing-address", "POST", $billing_address );
+   log_write( "add billing address /checkouts/{$bigcommerce_cart_id}/billing-address" );
+   log_write( json_encode($billing_address) );
+   log_write( "add billing address answer ".print_r($checkout,true) );
+   
+   //Add a New Consignment to Checkout
+   $consignment = new stdClass();
+   //TODO If shipping address differs than billing address?
+   $consignment->shipping_address = $billing_address;
+   //send all physical products to this address
+   $physical_items = $checkout->data->cart->line_items->physical_items;
+   foreach ( $physical_items as $physical_item ) {
+    $consignment->line_items[] = array(
+     "item_id"  => $physical_item->id,
+     "quantity" => $physical_item->quantity,
+    );
+   }
+   log_write("Add a New Consignment");
+   log_write( json_encode($consignment) );
+   $checkout = bigcommerce_api_v3 ( "/checkouts/{$bigcommerce_cart_id}/consignments", "POST", $consignment );
+   log_write( "Add a New Consignment answer ".print_r($checkout,true) );
+   log_write( "checkout_to_order /checkouts/{$bigcommerce_cart_id}/orders");
+   //exit;
+
+   $order = bigcommerce_api_v3 ( "/checkouts/{$bigcommerce_cart_id}/orders", "POST" );
+   
+   log_write(print_r($order,true));
+   exit;
+   
+  } else {
+
+   
+   $order = new stdClass();
+   
+   $order->products = array();
+
+   foreach ($cart->data->line_items->physical_items as $item) {
+    $product = new stdClass();
+    $product->product_id = $item->product_id;
+    $product->quantity = $item->quantity;
+    
+    $order->products[] = $product;
+   }
+   // TODO: the same about non physical items 
+
+   
+  }
+  
+
+   
   $order->subtotal_ex_tax = $cart->data->base_amount;
   $order->subtotal_inc_tax = $cart->data->base_amount;
   
@@ -343,18 +413,8 @@
   $order->shipping_cost_inc_tax = $shipping_cost;
   $order->base_shipping_cost = $shipping_cost;
   $order->order_is_digital = false;
-/*  
-  <subtotal_ex_tax>34.9500</subtotal_ex_tax>
-  <subtotal_inc_tax>34.9500</subtotal_inc_tax>
-  
-    <base_shipping_cost>10.0000</base_shipping_cost>
-    <shipping_cost_ex_tax>10.0000</shipping_cost_ex_tax>
-    <shipping_cost_inc_tax>10.0000</shipping_cost_inc_tax>
 
-    <total_ex_tax>44.9500</total_ex_tax>
-    <total_inc_tax>44.9500</total_inc_tax>
-  */
-
+  $bolt_billing_address = $bolt_transaction->order->cart->billing_address;
   $order->billing_address = new stdClass();
   $order->billing_address->first_name   = $bolt_billing_address->first_name;
   $order->billing_address->last_name    = $bolt_billing_address->last_name;
@@ -362,9 +422,8 @@
   $order->billing_address->company      = "";
   $order->billing_address->street_1     = $bolt_billing_address->street_address1;
   $order->billing_address->street_2     = "";
-  $order->billing_address->city         = $bolt_billing_address->locality;
-  // TODO: find state in bolt form
-  $order->billing_address->state        = "???";
+  $order->billing_address->city         = $bolt_billing_address->locality;  
+  $order->billing_address->state        = $bolt_billing_address->region;
   $order->billing_address->zip          = $bolt_billing_address->postal_code;
   $order->billing_address->country      = $bolt_billing_address->country;
   $order->billing_address->country_iso2 = $bolt_billing_address->country_code;
@@ -375,17 +434,6 @@
   $order->shipping_addresses[] = clone $order->billing_address;
   $order->shipping_addresses[0]->shipping_method = $bolt_transaction->order->cart->shipments[0]->service;
   
-  
-  $order->products = array();
-
-  foreach ($cart->data->line_items->physical_items as $item) {
-   $product = new stdClass();
-   $product->product_id = $item->product_id;
-   $product->quantity = $item->quantity;
-   //echo "!!!"; exit;
-   $order->products[] = $product;
-  }
-  // TODO: the same about non physical items 
  
   Client::failOnError(true);
   log_write("<P>bc_order");
