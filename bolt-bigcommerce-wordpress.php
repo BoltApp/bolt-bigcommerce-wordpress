@@ -160,6 +160,7 @@
  //code "bolt_cart_button($cart);" added in bigcommerce-for-wordpress-master/public-views/cart.php
  //before "</footer>"
  function bolt_cart_button($bigcommerce_cart) {
+  //TODO: If the cart changes without page reload handle then send to Bolt the new cart
   $currency_code = get_option( BigCommerce\Settings\Currency::CURRENCY_CODE, '' );
   
   $order_reference = uniqid('BLT',false);
@@ -173,6 +174,11 @@
    "discounts"       => array(),
   );
   foreach ($bigcommerce_cart["items"] AS $item_id=>$item) {
+   if ( "digital" == $item["bigcommerce_product_type"][0]["label"] ) {
+    $type = "digital";
+   } else {
+    $type = "physical";
+   }
    $cart["items"][] = array(
     "reference"    => $order_reference,
     "name"         => $item["name"],
@@ -181,12 +187,10 @@
     "total_amount" => round( $item["total_sale_price"]["raw"] * 100 ),
     "unit_price"   => round( $item["sale_price"]["raw"] * 100 ),
     "quantity"     => $item["quantity"],
-    // TODO: work with different types of products
-    "type"         => "physical", //!!!!
+    "type"         => $type,
    );
   }
   $cartData = array("cart" => $cart);
-  //print_r($cartData);exit;
 
   $client = new \BoltPay\ApiClient([
     'api_key' => \BoltPay\Bolt::$apiKey,
@@ -334,7 +338,7 @@
   
   
   if ( BC_API == "v3" ) {
-   //files names differ between BC v2 and v3 API. For example country_code <>country_iso2
+   //files names differ between BC v2 and v3 API. For example country_code <==> country_iso2
    $billing_address = new stdClass();
    $billing_address->first_name        = $bolt_billing_address->first_name;
    $billing_address->last_name         = $bolt_billing_address->last_name;
