@@ -87,6 +87,8 @@
  
  //return shipping methods
  function bolt_endpoint_handler_shipping_tax() {
+  //TODO deal with shipping discount https://store-5669f02hng.mybigcommerce.com/manage/marketing/discounts/create
+  //TO DO return "no shipping required" as option if all products are digital
   $hmacHeader = @$_SERVER['HTTP_X_BOLT_HMAC_SHA256'];
   $signatureVerifier = new \BoltPay\SignatureVerifier(
     \BoltPay\Bolt::$signingSecret
@@ -161,6 +163,8 @@
  //before "</footer>"
  function bolt_cart_button($bigcommerce_cart) {
   //TODO: If the cart changes without page reload handle then send to Bolt the new cart
+  //In bolt-woocommerce we use page reload at event 'updated_cart_totals' but I don't see JS event on bigcommerce-wordpress
+
   $currency_code = get_option( BigCommerce\Settings\Currency::CURRENCY_CODE, '' );
   
   $order_reference = uniqid('BLT',false);
@@ -170,9 +174,20 @@
    "currency"        => $currency_code,
    "total_amount"    => round( $bigcommerce_cart["cart_amount"]["raw"] * 100 ),
    "tax_amount"      => 0,
-   // TODO: work with discounts
    "discounts"       => array(),
   );
+
+  //Discounts for product: show only discounted price as well as in bolt-woocommerce
+  //Discounts for cart: show only total discount (Bigcommerce restrictions)
+  //Coupon codes: customer can use it only after press "Bigcommerce process to checkout"
+  if ($bigcommerce_cart["discount_amount"]) {
+   $cart["discounts"][] = array(
+    "amount"      => (int)( round( $bigcommerce_cart["discount_amount"]["raw"] * 100) ),
+    "description" => "Discount",
+   );
+  }
+  
+  
   foreach ($bigcommerce_cart["items"] AS $item_id=>$item) {
    if ( "digital" == $item["bigcommerce_product_type"][0]["label"] ) {
     $type = "digital";
@@ -199,6 +214,10 @@
   
   $response = $client->createOrder($cartData);
   $orderToken = $response->isResponseSuccessful()  ? @$response->getBody()->token : '';
+  if (!$orderToken) {
+   echo "error Bolt order create";
+   exit;
+  }
   //save link between order_reference and bolt_cart_id_
   //it uses when we create order in bigcommerce (function bolt_create_order)
   //todo: think about better storage
@@ -342,10 +361,9 @@
    $billing_address = new stdClass();
    $billing_address->first_name        = $bolt_billing_address->first_name;
    $billing_address->last_name         = $bolt_billing_address->last_name;
-   // TODO: find company in bolt form
    $billing_address->company           = "";
    $billing_address->address1          = $bolt_billing_address->street_address1;
-   $billing_address->address2          = "";
+   $billing_address->address2          = $bolt_billing_address->street_address2;
    $billing_address->city              = $bolt_billing_address->locality;
    $billing_address->state_or_province = $bolt_billing_address->region;
    $billing_address->postal_code       = $bolt_billing_address->postal_code;
@@ -362,7 +380,7 @@
    
    //Add a New Consignment to Checkout
    $consignment = new stdClass();
-   //TODO If shipping address differs than billing address?
+   //In Bolt  the shipping address is the same as the billing address
    $consignment->shipping_address = $billing_address;
    //send all physical products to this address
    $physical_items = $checkout->data->cart->line_items->physical_items;
@@ -422,10 +440,10 @@
   $order->billing_address = new stdClass();
   $order->billing_address->first_name   = $bolt_billing_address->first_name;
   $order->billing_address->last_name    = $bolt_billing_address->last_name;
-  // TODO: find company in bolt form
+  //Bolt can't add company name to address
   $order->billing_address->company      = "";
   $order->billing_address->street_1     = $bolt_billing_address->street_address1;
-  $order->billing_address->street_2     = "";
+  $order->billing_address->street_2     = $bolt_billing_address->street_address2;
   $order->billing_address->city         = $bolt_billing_address->locality;  
   $order->billing_address->state        = $bolt_billing_address->region;
   $order->billing_address->zip          = $bolt_billing_address->postal_code;
