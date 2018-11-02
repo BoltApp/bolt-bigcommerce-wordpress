@@ -40,7 +40,7 @@ if ( in_array( 'bigcommerce-for-wordpress-master/bigcommerce.php', apply_filters
  $bolt_bigcommerce->init_public_ajax();
 }
 
-//temporary solution while bigcommerce hook doesn't created
+//temporary solution while bigcommerce hook doesn't exist
 function bolt_cart_button($bigcommerce_cart) {
  global $bolt_bigcommerce;
  return $bolt_bigcommerce->bolt_cart_button($bigcommerce_cart);

@@ -75,14 +75,19 @@ class Bolt_Bigcommerce_Wordpress
   }
  
   //create new order
-  $order_reference = $bolt_data->order;
-  $bigcommerce_cart_id = get_option( "bolt_cart_id_".$order_reference );
-  $bolt_reference = $bolt_data->reference;
-  $response = $this->bolt_create_order( $bolt_reference, $bigcommerce_cart_id, $bolt_data );
- 
-  //empty cart
-  BCClient::deleteResource("/v3/carts/{$bigcommerce_cart_id}");
- 
+  //$order_reference = $bolt_data->order;
+  //$bigcommerce_cart_id = get_option( "bolt_cart_id_".$order_reference );
+  //$bolt_reference = $bolt_data->reference;
+  
+  $result = $this->bolt_create_order( $bolt_data->reference, $bolt_data->order, $bolt_data );
+  
+  $response = new stdClass();
+  $response -> status = $result["status"];
+  $response -> created_objects = new stdClass();
+  $response -> created_objects   -> merchant_order_ref = $result["order_id"];
+  
+  $this->log_write("response: ".print_r($response,true));
+  
   wp_send_json( $response );
   wp_die();
  }
@@ -326,7 +331,7 @@ class Bolt_Bigcommerce_Wordpress
 </script>
 <?php
  }
- function bolt_order_set_status ( $order_id, $bolt_type, $bolt_status="" ) {
+ function order_set_status ( $order_id, $bolt_type, $bolt_status="" ) {
   //TODO If shop owner changed default statuses
   $new_status_id = 0;
   if ( "rejected_reversible" == $bolt_type ) {
@@ -345,38 +350,59 @@ class Bolt_Bigcommerce_Wordpress
 
   if ( $new_status_id && $order->id != $new_status_id) {
    $this->log_write("Order {$order_id} Change status From {$order->status_id} ({$order->status}) TO {$new_status_id} {$custom_status} ");
-   Client::updateResource( "/orders/{$order_id}", array( "status_id" => $new_status_id ) );
+   BCClient::updateResource( "/v2/orders/{$order_id}", array( "status_id" => $new_status_id ) );
   }
  }
   
  //create order in bigcommerce
- function bolt_create_order( $bolt_reference, $bigcommerce_cart_id, $bolt_data) {
+ //$bolt_reference - current transaction bolt id (like J7BK-JYZM-4RNF)
+ //$order_reference - id which we sent to bolt when creater order (like BLT5bdc8246d1a52)
+ function bolt_create_order( $bolt_reference, $order_reference, $bolt_data, $is_json = false) { 
+  $bigcommerce_cart_id = get_option( "bolt_cart_id_".$order_reference );
+  $result = array(
+   'status' => 'success',
+   'order_id' => 0,
+  );
   // prevent re-creation order
-  $this->log_write("bolt_create_order( {$bolt_reference}, {$bigcommerce_cart_id})");
+  $this->log_write("bolt_create_order( {$bolt_reference}, {$order_reference}) bigcommerce_cart_id = {$bigcommerce_cart_id})");
   $bc_order_id = get_option( "bolt_order_{$bolt_reference}" );
   if ($bc_order_id) {
    $this->log_write("prevent re-creation order");
-   bolt_order_set_status( $bc_order_id, $bolt_data->type, $bolt_data->status );
+   $this->order_set_status( $bc_order_id, $bolt_data->type, $bolt_data->status );
    $response = new stdClass();
    $response -> status = "success";
-   $response -> created_objects -> merchant_order_ref = $bc_order_id;   
-   return $response;
+   $result["order_id"] = $bc_order_id;   
+   return $result;
   }
-  //get data from Bolt transaction
-  $bolt_client = new \BoltPay\ApiClient([
+  if ($is_json) {
+   $bolt_billing_address = $bolt_data->shipping_address;
+   $shipping_method = $bolt_data->shipping_option->value->service;
+   $shipping_cost = $bolt_data->shipping_option->value->cost->amount / 100;
+  } else {  
+   //get data from Bolt transaction
+   $bolt_client = new \BoltPay\ApiClient([
     'api_key' => \BoltPay\Bolt::$apiKey,
     'is_sandbox' => \BoltPay\Bolt::$isSandboxMode
-  ]);
-  $bolt_transaction = $bolt_client->getTransactionDetails( $bolt_reference ) -> getBody();
-  $this->log_write("bolt_transaction ".print_r($bolt_transaction,true));
-  
-  $bolt_billing_address = $bolt_transaction->order->cart->billing_address;
-  $this->log_write(print_r($bolt_billing_address,true));
-  
+   ]);  
+   $bolt_transaction = $bolt_client->getTransactionDetails( $bolt_reference ) -> getBody();
+   $this->log_write("bolt_transaction ".print_r($bolt_transaction,true));  
+   $bolt_billing_address = $bolt_transaction->order->cart->billing_address;
+   //change names of the properties so they became the same with those obtained by ajax
+   $bolt_billing_address->phone = $bolt_billing_address->phone_number;
+   $bolt_billing_address->email = $bolt_billing_address->email_address;
+   
+   $shipping_method = $bolt_transaction->order->cart->shipments[0]->service;
+   $shipping_cost = $bolt_transaction->order->cart->shipments[0]->cost->amount / 100;
+  }
+  $this->log_write("shipping_method='$shipping_method' shipping_cost='$shipping_cost' billing address ".print_r($bolt_billing_address,true));
   //get data from bigcommerce cart
   $cart = BCClient::getCollection("/v3/carts/{$bigcommerce_cart_id}");
   $this->log_write("bigcommerce cart (/v3/carts/{$bigcommerce_cart_id})".print_r($cart,true));
   
+  if (!$cart) {
+   //cart already destroyed
+   return $result;
+  }
   
   if ( BC_API == "v3" ) {
    //files names differ between BC v2 and v3 API. For example country_code <==> country_iso2
@@ -391,8 +417,8 @@ class Bolt_Bigcommerce_Wordpress
    $billing_address->postal_code       = $bolt_billing_address->postal_code;
    $billing_address->country           = $bolt_billing_address->country;
    $billing_address->country_code      = $bolt_billing_address->country_code;
-   $billing_address->phone             = $bolt_billing_address->phone_number;
-   $billing_address->email             = $bolt_billing_address->email_address;
+   $billing_address->phone             = $bolt_billing_address->phone;
+   $billing_address->email             = $bolt_billing_address->email;
    //TODO: what happens if BC cart already differ from checkout bolt cart
    //add billing address
    $checkout = BCClient::createResource("/v3/checkouts/{$bigcommerce_cart_id}/billing-address", $billing_address);
@@ -448,9 +474,7 @@ class Bolt_Bigcommerce_Wordpress
   }
    
   $order->subtotal_ex_tax = $cart->data->base_amount;
-  $order->subtotal_inc_tax = $cart->data->base_amount;
-  
-  $shipping_cost = $bolt_transaction->order->cart->shipments[0]->cost->amount / 100;
+  $order->subtotal_inc_tax = $cart->data->base_amount; 
   
   $order->total_inc_tax = $cart->data->base_amount + $shipping_cost;
   $order->total_ex_tax = $cart->data->base_amount + $shipping_cost;
@@ -460,7 +484,6 @@ class Bolt_Bigcommerce_Wordpress
   $order->base_shipping_cost = $shipping_cost;
   $order->order_is_digital = false;
 
-  $bolt_billing_address = $bolt_transaction->order->cart->billing_address;
   $order->billing_address = new stdClass();
   $order->billing_address->first_name   = $bolt_billing_address->first_name;
   $order->billing_address->last_name    = $bolt_billing_address->last_name;
@@ -473,12 +496,12 @@ class Bolt_Bigcommerce_Wordpress
   $order->billing_address->zip          = $bolt_billing_address->postal_code;
   $order->billing_address->country      = $bolt_billing_address->country;
   $order->billing_address->country_iso2 = $bolt_billing_address->country_code;
-  $order->billing_address->phone        = $bolt_billing_address->phone_number;
-  $order->billing_address->email        = $bolt_billing_address->email_address;
+  $order->billing_address->phone        = $bolt_billing_address->phone;
+  $order->billing_address->email        = $bolt_billing_address->email;
   
   // add shipping method (text)
   $order->shipping_addresses[] = clone $order->billing_address;
-  $order->shipping_addresses[0]->shipping_method = $bolt_transaction->order->cart->shipments[0]->service;
+  $order->shipping_addresses[0]->shipping_method = $shipping_method;
   
  
   BCClient::failOnError(true);
@@ -494,12 +517,11 @@ class Bolt_Bigcommerce_Wordpress
   }
   //save Bigcommerce order id
   add_option( "bolt_order_{$bolt_reference}", $bc_order->id);
-
-  $response = new stdClass();
-  $response -> status = "success";
-  $response -> created_objects = new stdClass();
-  $response -> created_objects   -> merchant_order_ref = $bc_order->id;
-  return $response;
+  
+  BCClient::deleteResource("/v3/carts/{$bigcommerce_cart_id}");
+ 
+  $result["order_id"] = $bc_order->id;
+  return $result;
  }
  
  //AJAX success callback
@@ -507,6 +529,11 @@ class Bolt_Bigcommerce_Wordpress
 
  function save_order() {
   // TODO: move order creation from webhook to this function
+  $this->log_write( "save_order POST". print_r($_POST,true) );
+  $bolt_data = json_decode( stripslashes( $_POST["transaction_details"] ) );
+  $this->log_write( "transaction_details". print_r($bolt_data,true) );
+  $result = $this->bolt_create_order( $bolt_data->reference, $bolt_data->cart->order_reference, $bolt_data, true );
+  $this->log_write( "result in save order". print_r($result,true) );
   wp_send_json( array(
    'result'     => 'success',
    // TODO: create this order confirmation page
