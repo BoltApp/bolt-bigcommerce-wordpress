@@ -260,7 +260,7 @@ class Bolt_Bigcommerce_Wordpress
   $this->render("main.js.php", array( "orderToken" => $orderToken ) );
  } 
  function order_set_status ( $order_id, $bolt_type, $bolt_status="" ) {
-  //TODO If shop owner changed default statuses
+  //TODO (wait, asked) If shop owner changed default statuses
   $new_status_id = 0;
   if ( "rejected_reversible" == $bolt_type ) {
    $new_status_id = 12; // Manual Verification Required
@@ -347,7 +347,7 @@ class Bolt_Bigcommerce_Wordpress
    $billing_address->country_code      = $bolt_billing_address->country_code;
    $billing_address->phone             = $bolt_billing_address->phone;
    $billing_address->email             = $bolt_billing_address->email;
-   //TODO: what happens if BC cart already differ from checkout bolt cart
+   //TODO (after v3): If checkout bolt cart is different from BC cart use checkout bolt cart
    //add billing address
    $checkout = BCClient::createResource("/v3/checkouts/{$bigcommerce_cart_id}/billing-address", $billing_address);
    $this->log_write( "add billing address /v3/checkouts/{$bigcommerce_cart_id}/billing-address" );
@@ -398,7 +398,7 @@ class Bolt_Bigcommerce_Wordpress
     
     $order->products[] = $product;
    }
-   // TODO: the same about non physical items   
+   // TODO: (after v3) the same about non physical items   
   }
    
   $order->subtotal_ex_tax = $cart->data->base_amount;
@@ -462,7 +462,7 @@ class Bolt_Bigcommerce_Wordpress
   $this->clean_up_archaic_resources_async();
   wp_send_json( array(
    'result'     => 'success',
-   // TODO: create this order confirmation page
+   // TODO: (after v3) create this order confirmation page
    'redirect_url'  => get_site_url()."/success",
   ) );
  }
@@ -527,8 +527,7 @@ class Bolt_Bigcommerce_Wordpress
   $this->log_write("start ajax_clean_up_archaic_resources");
   ignore_user_abort(true);
   set_time_limit(300);
-  //todo: add BugsnagHelper
-  //BugsnagHelper::initBugsnag();
+  BugsnagHelper::initBugsnag();
   //////////////////////////////////////////////
   /// Clear historic bolt resources
   //////////////////////////////////////////////

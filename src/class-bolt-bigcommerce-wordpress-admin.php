@@ -19,8 +19,8 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 
 	//Add plugin to wordpress admin menu.
 	public function admin_menu() {
-  //TODO: move to Bigcommerce as submenu page
-  add_menu_page( 'Bolt', 'Bolt', 'manage_options', 'bolt-bigcommerce', array( $this, 'settings' ) );	
+  add_submenu_page( 'edit.php?post_type=bigcommerce_product', 'Bolt', 'Bolt', 'manage_options', 'bolt-bigcommerce', array( $this, 'settings' ) );
+  //add_menu_page( 'Bolt', 'Bolt', 'manage_options', 'bolt-bigcommerce', array( $this, 'settings' ) );	
   foreach ($this->form_fields as $key=>$form_field) {
    register_setting( 'bolt-bigcommerce', "bolt-bigcommerce_{$key}" );
   }  
