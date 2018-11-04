@@ -31,8 +31,6 @@ if ( in_array( 'bigcommerce-for-wordpress-master/bigcommerce.php', apply_filters
 	}
 
  // include Bolt API
- // API_KEY and other parameters temporary stores /lib/config_bolt_php.php
- // TODO: Move settings to wordpress admin
  require(dirname(__FILE__) . '/lib/bolt-php/init.php');
  require(dirname(__FILE__) . '/src/class-bc-client.php');
 

@@ -15,6 +15,9 @@ class Bolt_Bigcommerce_Wordpress
 	public function init_public_ajax() {
   add_action('wp_ajax_bolt_create_order', array( $this, 'save_order' ) );
   add_action('wp_ajax_nopriv_bolt_create_order', array( $this, 'save_order' ) );
+  add_action('wp_ajax_bolt_clean_up_resources', array( $this, 'ajax_clean_up_archaic_resources' ) );
+  add_action('wp_ajax_nopriv_bolt_clean_up_resources', array( $this, 'ajax_clean_up_archaic_resources' ) );
+
 	}
  
  public function init_bolt_api() {
@@ -50,7 +53,7 @@ class Bolt_Bigcommerce_Wordpress
  
  //temporary log function
  protected function log_write($text) {
-  //$logecho = true;
+  $logecho = false;
   $f = fopen( dirname(__FILE__) . "/../log.txt","a" );
   fwrite( $f, date("Y-m-d H:i:s")." ".$text."\r\n" );
   if ($logecho) echo "<P>".date("Y-m-d H:i:s")."<pre>{$text}</pre>\r\n";
@@ -89,16 +92,15 @@ class Bolt_Bigcommerce_Wordpress
   $this->log_write("response: ".print_r($response,true));
   
   wp_send_json( $response );
-  wp_die();
  }
  
  //return shipping methods
  function handler_shipping_tax() {
-  //TODO: work with states maybe https://developer.bigcommerce.com/api/v3/#/reference/checkout/early-access-server-to-server-checkout/add-a-new-consignment-to-checkout 
-  //TODO error with product types: always unknown
-  //TODO deal with shipping discount https://store-5669f02hng.mybigcommerce.com/manage/marketing/discounts/create
-  //TODO return "no shipping required" as option if all products are digital
-  //TODO work with taxes
+  //TODO (after v3) work with states maybe https://developer.bigcommerce.com/api/v3/#/reference/checkout/early-access-server-to-server-checkout/add-a-new-consignment-to-checkout 
+  //TODO (wait) error with product types: always unknown https://app.asana.com/0/0/895580293902646/f
+  //TODO (after v3) deal with shipping discount https://store-5669f02hng.mybigcommerce.com/manage/marketing/discounts/create
+  //TODO (after v3) return "no shipping required" as option if all products are digital
+  //TODO (wait) work with taxes https://app.asana.com/0/0/895580293902645/f
   $hmacHeader = @$_SERVER['HTTP_X_BOLT_HMAC_SHA256'];
   $signatureVerifier = new \BoltPay\SignatureVerifier(
     \BoltPay\Bolt::$signingSecret
@@ -106,18 +108,18 @@ class Bolt_Bigcommerce_Wordpress
  
   $bolt_order_json = file_get_contents('php://input');
   $bolt_order = json_decode($bolt_order_json);
-  $this->log_write(print_r($bolt_order,true));
+  $this->log_write("handler_shipping_tax ".print_r($bolt_order,true));
 
   if (!$signatureVerifier->verifySignature($bolt_order_json, $hmacHeader)) {
    throw new Exception("Failed HMAC Authentication");
   }
-  // TODO: add validation from wooplugin like $region = bolt_addr_helper()->get_region_code( $country_code, $bolt_order->shipping_address->region ? :'');
+  // TODO: (later) add validation from wooplugin like $region = bolt_addr_helper()->get_region_code( $country_code, $bolt_order->shipping_address->region ? :'');
   $country_code = $bolt_order->shipping_address->country_code;
   $post_code = $bolt_order->shipping_address->postal_code;
   $region = $bolt_order->shipping_address->region;
  
 
-  // TODO: think about cache /shipping/zones
+  // TODO: (after v3) think about cache /shipping/zones
   $shipping_zones = BCClient::getCollection('/v2/shipping/zones');
   
   // look for shipping zone contains specific country
@@ -142,7 +144,7 @@ class Bolt_Bigcommerce_Wordpress
   $shipping_methods = BCClient::getCollection("/v2/shipping/zones/{$shipping_zone_id}/methods");
   $this->log_write("shipping_methods ".print_r($shipping_methods,true));
   $bolt_shipping_options = array();
-  // TODO: now code works only with 'flat rate - per order' and 'free shipping'. works with other delivery methods
+  // TODO: (after V3) now code works only with 'flat rate - per order' and 'free shipping'. works with other delivery methods
   if ($shipping_zone->free_shipping && $shipping_zone->free_shipping->enabled) {
    $bolt_shipping_options[] = array(
     "service"    => "Free Shipping - Free",
@@ -182,13 +184,12 @@ class Bolt_Bigcommerce_Wordpress
   $response = array ( "shipping_options" => $bolt_shipping_options);
   
   wp_send_json( $response );
-  wp_die();
  }
  //render html and js code for bolt checkout button
  //code "bolt_cart_button($cart);" added in bigcommerce-for-wordpress-master/public-views/cart.php
  //before "</footer>"
  function bolt_cart_button($bigcommerce_cart) {
-  //TODO: If the cart changes without page reload handle then send to Bolt the new cart
+  //TODO: (later) If the cart changes without page reload handle then send to Bolt the new cart
   //In bolt-woocommerce we use page reload at event 'updated_cart_totals' but I don't see JS event on bigcommerce-wordpress
 
   $currency_code = get_option( BigCommerce\Settings\Currency::CURRENCY_CODE, '' );
@@ -199,7 +200,7 @@ class Bolt_Bigcommerce_Wordpress
    "display_id"      => $order_reference,
    "currency"        => $currency_code,
    "total_amount"    => round( $bigcommerce_cart["cart_amount"]["raw"] * 100 ),
-   "tax_amount"      => 0,
+   "tax_amount"      => round( $bigcommerce_cart["tax_amount"]["raw"] * 100 ),
    "discounts"       => array(),
   );
 
@@ -232,6 +233,7 @@ class Bolt_Bigcommerce_Wordpress
    );
   }
   $cartData = array("cart" => $cart);
+  $this->log_write("Create cart ".print_r($cartData,true));
 
   $client = new \BoltPay\ApiClient([
     'api_key' => \BoltPay\Bolt::$apiKey,
@@ -240,97 +242,23 @@ class Bolt_Bigcommerce_Wordpress
   
   $response = $client->createOrder($cartData);
   $orderToken = $response->isResponseSuccessful()  ? @$response->getBody()->token : '';
+  $this->log_write("Create cart orderToken ".$orderToken);
   if (!$orderToken) {
    echo "error Bolt order create";
+   print_r($response);
+   print_r($bigcommerce_cart);
    exit;
   }
   //save link between order_reference and bolt_cart_id_
   //it uses when we create order in bigcommerce (function bolt_create_order)
-  //todo: think about better storage
   $updated = update_option( "bolt_cart_id_".$order_reference, $bigcommerce_cart["cart_id"]);
   $this->log_write( "cart_id={$bigcommerce_cart["cart_id"]}" );
- //Sample JS CODE
- // TODO: move it to the template
- ?>
-<div class="bolt-checkout-button with-cards"></div>
-<?= \BoltPay\Helper::renderBoltTrackScriptTag(); ?>
-<?= \BoltPay\Helper::renderBoltConnectScriptTag(); ?>
-<script>
-    // Once the payment has been done on the bolt this method will be fired.
-    save_checkout = function ( transaction, callback, type ) {
 
-        var params = [
-            'transaction_details=' + JSON.stringify( transaction ),
-            //'_wpnonce=' + wc_bolt_checkout_config.nonce.checkout,
-            type + '=1'
-        ];
-        //if(bolt_checkout_form && jQuery( bolt_checkout_form ).length>0){
-        //    params.unshift(jQuery( bolt_checkout_form ).serialize());
-        //}
-        var cart_data = params.join("&");
-        
-        jQuery.ajax( {
-            type: 'POST',
-            url: '<?= admin_url('admin-ajax.php'); ?>?action=bolt_create_order',
-            data: cart_data,
-            success: function ( data ) {
-                if ( data.result != 'success' ) {
-                    //jQuery('#bolt-modal-background').remove();
-                    //jQuery('html').removeClass('bolt_modal_active');
-                    //jQuery('body').css('overflow', 'auto');
-                    //display_notices(data);
-                } else {
-                    redirect_url = data.redirect_url;
-                    callback();
-                }
-            }
-        } );
-     };
-
-    var cart = {
-        "orderToken": "<?= $orderToken;?>",
-        "authcapture": true
-    };
-    var hints = {};
-    var callbacks = {
-        check: function () {
-            // This function is called just before the checkout form loads.
-            // This is a hook to determine whether Bolt can actually proceed
-            // with checkout at this point. This function MUST return a boolean.
-            return true;
-        },
-
-        onCheckoutStart: function () {
-            // This function is called after the checkout form is presented to the user.
-        },
-
-        onShippingDetailsComplete: function () {
-            // This function is called when the user proceeds to the shipping options page.
-            // This is applicable only to multi-step checkout.
-        },
-
-        onShippingOptionsComplete: function () {
-            // This function is called when the user proceeds to the payment details page.
-            // This is applicable only to multi-step checkout.
-        },
-
-        onPaymentSubmit: function () {
-            // This function is called after the user clicks the pay button.
-        },
-
-        success: function (transaction, callback) {
-            save_checkout(transaction, callback, 'product_page');
-        },
-
-        close: function () {
-            // This function is called when the Bolt checkout modal is closed.
-            location.href = redirect_url;
-        }
-    };
-    BoltCheckout.configure(cart, hints, callbacks);
-</script>
-<?php
- }
+  echo '<div class="bolt-checkout-button with-cards"></div>';
+  echo \BoltPay\Helper::renderBoltTrackScriptTag();
+  echo \BoltPay\Helper::renderBoltConnectScriptTag();
+  $this->render("main.js.php", array( "orderToken" => $orderToken ) );
+ } 
  function order_set_status ( $order_id, $bolt_type, $bolt_status="" ) {
   //TODO If shop owner changed default statuses
   $new_status_id = 0;
@@ -525,20 +453,129 @@ class Bolt_Bigcommerce_Wordpress
  }
  
  //AJAX success callback
- //for now save the order later, via webhook
-
  function save_order() {
-  // TODO: move order creation from webhook to this function
   $this->log_write( "save_order POST". print_r($_POST,true) );
   $bolt_data = json_decode( stripslashes( $_POST["transaction_details"] ) );
   $this->log_write( "transaction_details". print_r($bolt_data,true) );
   $result = $this->bolt_create_order( $bolt_data->reference, $bolt_data->cart->order_reference, $bolt_data, true );
   $this->log_write( "result in save order". print_r($result,true) );
+  $this->clean_up_archaic_resources_async();
   wp_send_json( array(
    'result'     => 'success',
    // TODO: create this order confirmation page
    'redirect_url'  => get_site_url()."/success",
   ) );
-  wp_die();
  }
+ /**
+ * Makes non-blocking call to URL endpoint for cleaning up expired order creation resources
+ */
+ protected function clean_up_archaic_resources_async() {
+  $this->log_write("start clean_up_archaic_resources_async");
+  if(!function_exists('stream_socket_client')) {
+   BugsnagHelper::getBugsnag()->notifyException(new Exception("This merchant does not appear to have streamed socket support enabled for resource cleanup.  Please enable this on their server."));
+   return;
+  }
+  
+  $url_parts = parse_url(get_site_url());
+  $host = $url_parts['host'];
+  $protocol = '';
+  $port = @$url_parts['port'] ?: 80;
+  $context = null;
+  
+  if ($url_parts['scheme'] === 'https') {
+   $protocol = 'ssl://';
+   $port = @$url_parts['port'] ?: 443;
+   
+   # verification disabled because ca_root file may not be configured correctly on host server
+   # it is not needed because we can trust a call to our own server
+   $context = stream_context_create([
+    'ssl' => [
+     'verify_peer' => false,
+     'verify_peer_name' => false
+    ]
+   ]);
+  }
+  $errno = '';
+  $errstr = '';
+  $this->log_write("$protocol$host:$port");
+  if ($context) {
+   $fp = stream_socket_client("$protocol$host:$port", $errno, $errstr, 30, STREAM_CLIENT_CONNECT, $context);
+  } else {
+   $fp = stream_socket_client("$protocol$host:$port", $errno, $errstr, 30, STREAM_CLIENT_CONNECT);
+  }
+  $this->log_write(print_r($fp,true));
+  stream_set_blocking($fp, false);
+  
+  if(!$fp){
+   $this->log_write("Error connecting to clean Bolt resources. $errstr ($errno)\n");
+   BugsnagHelper::getBugsnag()->notifyException(new Exception("Error connecting to clean Bolt resources. $errstr ($errno)\n"));
+  } else {
+   $out = "POST /wp-admin/admin-ajax.php?action=bolt_clean_up_resources HTTP/1.1\r\n";
+   $out.= "Host: $host\r\n";
+   $out.= "Content-Type: application/x-www-form-urlencoded\r\n";
+   $out.= "Content-Length: 0\r\n";
+   $out.= "Connection: Close\r\n\r\n";
+   
+   fwrite($fp, $out);
+   # Close socket immediately as we don't need to wait for execution completion
+   fclose($fp);
+  }
+ }
+ 
+ public function ajax_clean_up_archaic_resources() {
+  global $wpdb;
+  $this->log_write("start ajax_clean_up_archaic_resources");
+  ignore_user_abort(true);
+  set_time_limit(300);
+  //todo: add BugsnagHelper
+  //BugsnagHelper::initBugsnag();
+  //////////////////////////////////////////////
+  /// Clear historic bolt resources
+  //////////////////////////////////////////////
+  if ( !get_option('has_initiated_clearing_historic_bolt_resources') ) {
+   # Disable option autoloading
+   $wpdb->query( "UPDATE {$wpdb->options} SET autoload='no' WHERE option_name LIKE 'bolt_order_%'");
+   $wpdb->query( "UPDATE {$wpdb->options} SET autoload='no' WHERE option_name LIKE 'bolt_cart_id_%'");
+   
+   # Queue these rows to be deleted after 72 hours.
+   # We leave them for that long in case they are current orders being processed, or pending review over the weekend.
+   update_option('delete_bolt_resources_time', time() + 60*60*24*3);
+   update_option('delete_bolt_order_resources', implode(",", $wpdb->get_col("SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_order_%'")), false);
+   $this->log_write("update_option('delete_bolt_order_resources', ".implode(",", $wpdb->get_col("SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_order_%'")));
+   update_option('delete_bolt_cart_id_resources', implode(",", $wpdb->get_col("SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_cart_id_%'")), false);
+   $this->log_write("update_option('delete_bolt_cart_id_resources', ".implode(",", $wpdb->get_col("SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_cart_id_%'")));
+   
+   update_option('has_initiated_clearing_historic_bolt_resources', true);
+  }
+  
+  # Delete bolt resources if 72hr grace period has passed
+  if (($deletion_time = get_option('delete_bolt_resources_time')) && $deletion_time <= time()) {
+   # Remove expired data from abandoned carts
+   $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'bolt_order_%' AND option_id IN (".get_option('delete_bolt_order_resources').")" );
+   $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'bolt_cart_id_%' AND option_id IN (".get_option('delete_bolt_cart_id_resources').")" );
+  
+   delete_option('delete_bolt_resources_time');
+   
+   # after the 72 hour period, we re-enable our 72 hour historic cleaning cycle to account for abandoned cart resources
+   update_option('has_initiated_clearing_historic_bolt_resources', false);
+  }
+
+ }
+ 
+ //render template
+	public function render( $template_name, array $parameters = array(), $render_output = true ) {
+		foreach ( $parameters as $name => $value ) {
+			${$name} = $value;
+		}
+		ob_start();
+		include __DIR__ . '/../view/' . $template_name;
+		$output = ob_get_contents();
+		ob_end_clean();
+		
+		if ( $render_output ) {
+			echo $output;
+		} else {
+			return $output;
+		}
+	}
 }
