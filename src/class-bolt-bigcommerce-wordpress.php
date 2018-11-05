@@ -34,10 +34,10 @@ class Bolt_Bigcommerce_Wordpress
 		\BoltPay\Bolt::$apiPublishableKey = $this->get_option( "publishable_key" );
 		\BoltPay\Bolt::$isSandboxMode = @$config['IS_SANDBOX'];
 		\BoltPay\Bolt::$authCapture = @$config['AUTH_CAPTURE'];
-		\BoltPay\Bolt::$connectSandboxBase = !@$config['CONNECT_SANDBOX_BASE'] ?: $config['CONNECT_SANDBOX_BASE'];
-		\BoltPay\Bolt::$connectProductionBase = !@$config['CONNECT_PRODUCTION_BASE'] ?: $config['CONNECT_PRODUCTION_BASE'];
-		\BoltPay\Bolt::$apiSandboxUrl = !@$config['API_SANDBOX_URL'] ?: $config['API_SANDBOX_URL'];
-		\BoltPay\Bolt::$apiProductionUrl = @$config['API_PRODUCTION_URL'] ?: $config['API_PRODUCTION_URL'];
+		\BoltPay\Bolt::$connectSandboxBase = 'https://connect-sandbox.bolt.com';
+		\BoltPay\Bolt::$connectProductionBase = 'https://connect.bolt.com';
+		\BoltPay\Bolt::$apiSandboxUrl = 'https://api-sandbox.bolt.com';
+		\BoltPay\Bolt::$apiProductionUrl = 'https://api.bolt.com';
 	}
 
 	public function init_bigcommerce_api()
