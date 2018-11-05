@@ -14,39 +14,39 @@
  * License:           GPL-3.0
  * License URI:       http://www.gnu.org/licenses/gpl-3.0.txt
  */
- const BC_API="v2"; // use v3 server-to-server checkout APIs or not
- 
-if ( ! defined( 'ABSPATH' ) ) {
+const BC_API = "v2"; // use v3 server-to-server checkout APIs or not
+
+if ( !defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-if ( in_array( 'bigcommerce-for-wordpress-master/bigcommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
+if ( in_array( 'bigcommerce-for-wordpress/bigcommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
 	// Check if there is admin user
 	if ( is_admin() ) {
-		require_once( dirname( __FILE__ ) . '/src/class-bolt-bigcommerce-wordpress-admin.php' );
+		require_once(dirname( __FILE__ ) . '/src/class-bolt-bigcommerce-wordpress-admin.php');
 		$bolt_bigcommerce = new Bolt_Bigcommerce_Wordpress_Admin();
 	} else {
-		require_once( dirname( __FILE__ ) . '/src/class-bolt-bigcommerce-wordpress.php' );
+		require_once(dirname( __FILE__ ) . '/src/class-bolt-bigcommerce-wordpress.php');
 		$bolt_bigcommerce = new Bolt_Bigcommerce_Wordpress();
 	}
 
- // include Bolt API
- require(dirname(__FILE__) . '/lib/bolt-php/init.php');
- //require(dirname(__FILE__) . '/src/class-bc-client.php');
- // Include Bugsnag Class.
- require_once( dirname(__FILE__) . '/src/BugsnagHelper.php' );
+	// include Bolt API
+	require(dirname( __FILE__ ) . '/lib/bolt-php/init.php');
+	//require(dirname(__FILE__) . '/src/class-bc-client.php');
+	// Include Bugsnag Class.
+	require_once(dirname( __FILE__ ) . '/src/BugsnagHelper.php');
 
 
 	$bolt_bigcommerce->init();
- $bolt_bigcommerce->init_public_ajax();
-} 
-
+	$bolt_bigcommerce->init_public_ajax();
+}
 
 
 //temporary solution while bigcommerce hook doesn't exist
-function bolt_cart_button($bigcommerce_cart) {
- global $bolt_bigcommerce;
- return $bolt_bigcommerce->bolt_cart_button($bigcommerce_cart);
+function bolt_cart_button( $bigcommerce_cart )
+{
+	global $bolt_bigcommerce;
+	return $bolt_bigcommerce->bolt_cart_button( $bigcommerce_cart );
 }
 
  
