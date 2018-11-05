@@ -35,7 +35,7 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 		 * Settings for Bolt Payment Gateway.
 		 */
 		$this->form_fields = array(
-			'merchant_key' => array(
+			'api_key' => array(
 				'title' => __( 'Api Key', 'bolt-bigcommerce-wordpress' ),
 				'type' => 'text',
 				'description' => __( 'Used when calling Bolt API from your server.', 'bolt-bigcommerce-wordpress' ),
@@ -43,7 +43,7 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 				'desc_tip' => true,
 				'placeholder' => __( 'Enter Api Key', 'bolt-bigcommerce-wordpress' ),
 			),
-			'payment_secret_key' => array(
+			'signing_secret' => array(
 				'title' => __( 'Signing Secret', 'bolt-bigcommerce-wordpress' ),
 				'type' => 'text',
 				'description' => __( 'Used to authenticate the signature of the payload from Bolt server.', 'bolt-bigcommerce-wordpress' ),
@@ -51,7 +51,7 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 				'desc_tip' => true,
 				'placeholder' => __( 'Enter Payment secret key', 'bolt-bigcommerce-wordpress' ),
 			),
-			'processing_key' => array(
+			'publishable_key' => array(
 				'title' => __( 'Publishable Key (Payment Only)', 'bolt-bigcommerce-wordpress' ),
 				'type' => 'text',
 				'description' => __( 'Embedded in your website and used to identify you as a merchant. Typically used on the checkout page.', 'bolt-bigcommerce-wordpress' ),

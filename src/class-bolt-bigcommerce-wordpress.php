@@ -29,9 +29,9 @@ class Bolt_Bigcommerce_Wordpress
 	public function init_bolt_api()
 	{
 		$config = require(dirname( __FILE__ ) . '/../lib/config_bolt_php.php');
-		\BoltPay\Bolt::$apiKey = $this->get_option( "merchant_key" );
-		\BoltPay\Bolt::$signingSecret = $this->get_option( "payment_secret_key" );
-		\BoltPay\Bolt::$apiPublishableKey = $this->get_option( "processing_key" );
+		\BoltPay\Bolt::$apiKey = $this->get_option( "api_key" );
+		\BoltPay\Bolt::$signingSecret = $this->get_option( "signing_secret" );
+		\BoltPay\Bolt::$apiPublishableKey = $this->get_option( "publishable_key" );
 		\BoltPay\Bolt::$isSandboxMode = @$config['IS_SANDBOX'];
 		\BoltPay\Bolt::$authCapture = @$config['AUTH_CAPTURE'];
 		\BoltPay\Bolt::$connectSandboxBase = !@$config['CONNECT_SANDBOX_BASE'] ?: $config['CONNECT_SANDBOX_BASE'];
