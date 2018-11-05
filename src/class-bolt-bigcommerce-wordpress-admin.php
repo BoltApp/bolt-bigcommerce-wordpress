@@ -17,6 +17,7 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 	{
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		$this->init_form_fields();
+		parent::init();
 	}
 
 	//Add plugin to wordpress admin menu.

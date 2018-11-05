@@ -84,7 +84,6 @@ class BugsnagHelper
 	public static function beforeNotifyFunction( $error )
 	{
 		$meta_data = array(
-			'WooCommerce-Version' => WC()->version,
 			'Bolt-Plugin-Version' => WC_BOLT_GATEWAY_VERSION,
 			'Store-URL' => get_site_url()
 		);

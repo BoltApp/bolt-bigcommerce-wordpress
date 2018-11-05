@@ -35,18 +35,10 @@ if ( in_array( 'bigcommerce-for-wordpress/bigcommerce.php', apply_filters( 'acti
 	//require(dirname(__FILE__) . '/src/class-bc-client.php');
 	// Include Bugsnag Class.
 	require_once(dirname( __FILE__ ) . '/src/BugsnagHelper.php');
+	require_once(dirname( __FILE__ ) . '/src/class-bolt-logger.php');
 
 
 	$bolt_bigcommerce->init();
-	$bolt_bigcommerce->init_public_ajax();
-}
-
-
-//temporary solution while bigcommerce hook doesn't exist
-function bolt_cart_button( $bigcommerce_cart )
-{
-	global $bolt_bigcommerce;
-	return $bolt_bigcommerce->bolt_cart_button( $bigcommerce_cart );
 }
 
  
