@@ -32,14 +32,16 @@ if ( in_array( 'bigcommerce-for-wordpress-master/bigcommerce.php', apply_filters
 
  // include Bolt API
  require(dirname(__FILE__) . '/lib/bolt-php/init.php');
- require(dirname(__FILE__) . '/src/class-bc-client.php');
+ //require(dirname(__FILE__) . '/src/class-bc-client.php');
  // Include Bugsnag Class.
  require_once( dirname(__FILE__) . '/src/BugsnagHelper.php' );
 
 
 	$bolt_bigcommerce->init();
  $bolt_bigcommerce->init_public_ajax();
-}
+} 
+
+
 
 //temporary solution while bigcommerce hook doesn't exist
 function bolt_cart_button($bigcommerce_cart) {

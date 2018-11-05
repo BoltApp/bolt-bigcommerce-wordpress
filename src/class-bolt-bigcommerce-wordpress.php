@@ -10,6 +10,7 @@ class Bolt_Bigcommerce_Wordpress
 	public function init() {
   add_action( 'rest_api_init', array( $this, 'register_endpoints') );
   $this->init_bolt_api();
+  $this->init_bigcommerce_api();
 	}
  //Set up public ajax action.
 	public function init_public_ajax() {
@@ -19,7 +20,7 @@ class Bolt_Bigcommerce_Wordpress
   add_action('wp_ajax_nopriv_bolt_clean_up_resources', array( $this, 'ajax_clean_up_archaic_resources' ) );
 
 	}
- 
+
  public function init_bolt_api() {
   $config = require(dirname(__FILE__) . '/../lib/config_bolt_php.php');
   \BoltPay\Bolt::$apiKey = $this->get_option("merchant_key");
@@ -33,6 +34,26 @@ class Bolt_Bigcommerce_Wordpress
   \BoltPay\Bolt::$apiProductionUrl = @$config['API_PRODUCTION_URL'] ?: $config['API_PRODUCTION_URL'];
  }
 
+ public function init_bigcommerce_api() {
+  require_once(dirname(__FILE__) . '/bigcommerce-api/Client.php');
+  require_once(dirname(__FILE__) . '/bigcommerce-api/Connection.php');
+  $v3_url = untrailingslashit( get_option( "bigcommerce_store_url" ) );
+  preg_match( '#stores/([^\/]+)/#', $v3_url, $matches );
+  if ( empty( $matches[ 1 ] ) ) {
+		$store_hash = '';
+  } else {
+   $store_hash = $matches[ 1 ];
+  }
+  $this->log_write("init_bigcommerce_api");
+ 
+  BCClient::configure( [
+				'client_id'     => get_option( "BIGCOMMERCE_CLIENT_ID" ),
+				'auth_token'    => get_option( "BIGCOMMERCE_ACCESS_TOKEN" ),
+				'client_secret' => get_option( "BIGCOMMERCE_CLIENT_SECRET" ),
+				'store_hash'    => $store_hash,
+   ] );
+ }
+
 
  public function register_endpoints() {
     /**
@@ -41,13 +62,11 @@ class Bolt_Bigcommerce_Wordpress
     register_rest_route( 'bolt', '/response', array(
         'methods'  => WP_REST_Server::CREATABLE,
         'callback' => array( $this, 'handler_response' ),
-        //'callback' => 'bolt_endpoint_handler',
     ) );
 
     register_rest_route( 'bolt', '/shippingtax', array(
         'methods'  => WP_REST_Server::CREATABLE,
         'callback' => array( $this, 'handler_shipping_tax' ),
-        //'callback' => 'bolt_endpoint_handler_shipping_tax',
     ) );
  }
  
@@ -451,9 +470,10 @@ class Bolt_Bigcommerce_Wordpress
   $result["order_id"] = $bc_order->id;
   return $result;
  }
- 
+
  //AJAX success callback
  function save_order() {
+  $this->init_bigcommerce_api();
   $this->log_write( "save_order POST". print_r($_POST,true) );
   $bolt_data = json_decode( stripslashes( $_POST["transaction_details"] ) );
   $this->log_write( "transaction_details". print_r($bolt_data,true) );
