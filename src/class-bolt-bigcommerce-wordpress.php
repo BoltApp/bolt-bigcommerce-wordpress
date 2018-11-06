@@ -11,6 +11,7 @@ class Bolt_Bigcommerce_Wordpress
 	public function init()
 	{
 		add_action( 'bigcommerce/cart/proceed_to_checkout', array( $this, 'bolt_cart_button' ) );
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		$this->init_bolt_api();
 		$this->init_bigcommerce_api();
 
@@ -23,6 +24,11 @@ class Bolt_Bigcommerce_Wordpress
 		require_once(dirname( __FILE__ ) . '/class-bolt-save-order.php');
 		new Bolt_Save_Order();
 
+	}
+
+	public function enqueue_scripts()
+	{
+		wp_enqueue_style( 'bolt-bigcommerce', plugins_url( 'css/bolt-bigcommerce.css', __FILE__ ) );
 	}
 
 
@@ -66,9 +72,6 @@ class Bolt_Bigcommerce_Wordpress
 	{
 		return esc_attr( get_option( "bolt-bigcommerce_{$key}" ) );
 	}
-
-
-
 
 
 }
