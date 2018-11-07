@@ -264,6 +264,7 @@ class Connection
 		curl_setopt( $this->curl, CURLOPT_HTTPGET, false );
 
 		curl_setopt( $this->curl, CURLOPT_HTTPHEADER, $this->headers );
+		BoltLogger::write("headers".print_r($this->headers,true));
 	}
 
 	/**
@@ -275,14 +276,15 @@ class Connection
 	private function handleResponse()
 	{
 		if ( curl_errno( $this->curl ) ) {
+			BoltLogger::write("error ".curl_error( $this->curl )." ".curl_errno( $this->curl ));
 			throw new NetworkError( curl_error( $this->curl ), curl_errno( $this->curl ) );
 		}
 
 		$body = ($this->rawResponse) ? $this->getBody() : json_decode( $this->getBody() );
 
 		$status = $this->getStatus();
-
 		if ( $status >= 400 && $status <= 499 ) {
+			BoltLogger::write("status $status");
 			if ( $this->failOnError ) {
 				throw new ClientError( $body, $status );
 			} else {
@@ -290,6 +292,7 @@ class Connection
 				return false;
 			}
 		} elseif ( $status >= 500 && $status <= 599 ) {
+			BoltLogger::write("status $status");
 			if ( $this->failOnError ) {
 				throw new ServerError( $body, $status );
 			} else {
@@ -363,6 +366,7 @@ class Connection
 		if ( is_array( $query ) ) {
 			$url .= '?' . http_build_query( $query );
 		}
+		BoltLogger::write("url={$url}");
 
 		curl_setopt( $this->curl, CURLOPT_CUSTOMREQUEST, 'GET' );
 		curl_setopt( $this->curl, CURLOPT_URL, $url );

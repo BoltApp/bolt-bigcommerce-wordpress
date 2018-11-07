@@ -64,6 +64,7 @@ class Bolt_Save_Order
 
 	function order_set_status( $order_id, $bolt_type, $bolt_status = "" )
 	{
+		BoltLogger::write( "order_set_status( $order_id, $bolt_type, $bolt_status )" );
 		//TODO (wait, asked) If shop owner changed default statuses
 		$new_status_id = 0;
 		if ( "rejected_reversible" == $bolt_type ) {
@@ -75,14 +76,13 @@ class Bolt_Save_Order
 			$new_status_id = 6; // Declined
 		}
 
-		//read the old status
-		$order = BCClient::getCollection( "/v2/orders/{$order_id}" );
-		BoltLogger::write( "query '/order_status/{$order_id}'" );
-		BoltLogger::write( "answer" . print_r( $order, true ) );
-
 		if ( $new_status_id && $order->id != $new_status_id ) {
-			BoltLogger::write( "Order {$order_id} Change status From {$order->status_id} ({$order->status}) TO {$new_status_id} {$custom_status} " );
-			BCClient::updateResource( "/v2/orders/{$order_id}", array( "status_id" => $new_status_id ) );
+			$body = array( "status_id" => $new_status_id );
+			BoltLogger::write( "Order {$order_id} 
+			Change status From {$order->status_id} ({$order->status}) TO {$new_status_id} {$custom_status} " . json_encode( $body ) );
+			BCClient::updateResource( "/v2/orders/{$order_id}", $body );
+		} else {
+			BoltLogger::write( "order status was actual" );
 		}
 	}
 
@@ -107,8 +107,10 @@ class Bolt_Save_Order
 			$result["order_id"] = $bc_order_id;
 			return $result;
 		}
+
 		if ( $is_json ) {
 			$bolt_billing_address = $bolt_data->shipping_address;
+			$shipment = $bolt_data->shipping_option->value;
 			$shipping_method = $bolt_data->shipping_option->value->service;
 			$shipping_cost = $bolt_data->shipping_option->value->cost->amount / 100;
 		} else {
@@ -124,135 +126,47 @@ class Bolt_Save_Order
 			$bolt_billing_address->phone = $bolt_billing_address->phone_number;
 			$bolt_billing_address->email = $bolt_billing_address->email_address;
 
+			$shipment = $bolt_transaction->order->cart->shipments[0];
 			$shipping_method = $bolt_transaction->order->cart->shipments[0]->service;
 			$shipping_cost = $bolt_transaction->order->cart->shipments[0]->cost->amount / 100;
 		}
-		BoltLogger::write( "shipping_method='$shipping_method' shipping_cost='$shipping_cost' billing address " . print_r( $bolt_billing_address, true ) );
-		//get data from bigcommerce cart
-		$cart = BCClient::getCollection( "/v3/carts/{$bigcommerce_cart_id}" );
-		BoltLogger::write( "bigcommerce cart (/v3/carts/{$bigcommerce_cart_id})" . print_r( $cart, true ) );
+		$shipping_option_id = $shipment->reference;
+		BoltLogger::write( "shipment" . print_r( $shipment, true ) );
 
-		if ( !$cart ) {
-			//cart already destroyed
+		$checkout = BCClient::getCollection( "/v3/checkouts/{$bigcommerce_cart_id}" );
+		BoltLogger::write( "checkout = BCClient::getCollection( \"/v3/checkouts/{$bigcommerce_cart_id}\" );" );
+		BoltLogger::write( "get checkout " . print_r( $checkout, true ) );
+
+		if ( !$checkout ) {
+			BoltLogger::write( "cart already destroyed" );
 			return $result;
 		}
 
-		if ( BC_API == "v3" ) {
-			//files names differ between BC v2 and v3 API. For example country_code <==> country_iso2
-			$billing_address = new stdClass();
-			$billing_address->first_name = $bolt_billing_address->first_name;
-			$billing_address->last_name = $bolt_billing_address->last_name;
-			$billing_address->company = "";
-			$billing_address->address1 = $bolt_billing_address->street_address1;
-			$billing_address->address2 = $bolt_billing_address->street_address2;
-			$billing_address->city = $bolt_billing_address->locality;
-			$billing_address->state_or_province = $bolt_billing_address->region;
-			$billing_address->postal_code = $bolt_billing_address->postal_code;
-			$billing_address->country = $bolt_billing_address->country;
-			$billing_address->country_code = $bolt_billing_address->country_code;
-			$billing_address->phone = $bolt_billing_address->phone;
-			$billing_address->email = $bolt_billing_address->email;
-			//TODO (after v3): If checkout bolt cart is different from BC cart use checkout bolt cart
-			//add billing address
-			$checkout = BCClient::createResource( "/v3/checkouts/{$bigcommerce_cart_id}/billing-address", $billing_address );
-			BoltLogger::write( "add billing address /v3/checkouts/{$bigcommerce_cart_id}/billing-address" );
-			BoltLogger::write( json_encode( $billing_address ) );
-			BoltLogger::write( "add billing address answer " . print_r( $checkout, true ) );
+		$consignment_id = $checkout->data->consignments[0]->id;
+		$body = (object)array( "shipping_option_id" => $shipping_option_id );
+		BoltLogger::write( "UPDATE Consignment /v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options" );
+		BoltLogger::write( json_encode( $body ) );
+		$checkout = BCClient::updateResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $body );
+		BoltLogger::write( "New Consignment update answer " . print_r( $checkout, true ) );
 
+		BoltLogger::write( "CREATE ORDER /v3/checkouts/{$bigcommerce_cart_id}/orders" );
+		$order = BCClient::createResource( "/v3/checkouts/{$bigcommerce_cart_id}/orders" );
+		BoltLogger::write( print_r( $order, true ) );
+		$order_id = $order->data->id;
 
-			//Add a New Consignment to Checkout
-			$consignment = new stdClass();
-			//In Bolt  the shipping address is the same as the billing address
-			$consignment->shipping_address = $billing_address;
-			//send all physical products to this address
-			$physical_items = $checkout->data->cart->line_items->physical_items;
-			foreach ( $physical_items as $physical_item ) {
-				$consignment->line_items[] = array(
-					"item_id" => $physical_item->id,
-					"quantity" => $physical_item->quantity,
-				);
-			}
-			$params = array( $consignment );
-			BoltLogger::write( "Add a New Consignment /v3/checkouts/{$bigcommerce_cart_id}/consignments?include=availableShippingOptions" );
-			BoltLogger::write( json_encode( $params ) );
+		$pending_status_id = 1; //TODO Get status id from BC
+		$body = array( "status_id" => $pending_status_id );
+		BoltLogger::write( "Order {$order_id} UPDATE ORDER STATUS \"/v2/orders/{$order_id}\", " . json_encode( $body ) );
+		BCClient::updateResource( "/v2/orders/{$order_id}", $body );
 
-			$checkout = BCClient::createResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments?include=availableShippingOptions", $params );
-			BoltLogger::write( "Add a New Consignment answer " . print_r( $checkout, true ) );
-			exit;
-
-
-			BoltLogger::write( "checkout_to_order /v3/checkouts/{$bigcommerce_cart_id}/orders" );
-			//exit;
-
-			$order = BCClient::createResource( "/v3/checkouts/{$bigcommerce_cart_id}/orders" );
-
-			BoltLogger::write( print_r( $order, true ) );
-			exit;
-
-		} else {
-
-
-			$order = new stdClass();
-
-			$order->products = array();
-
-			foreach ( $cart->data->line_items->physical_items as $item ) {
-				$product = new stdClass();
-				$product->product_id = $item->product_id;
-				$product->quantity = $item->quantity;
-
-				$order->products[] = $product;
-			}
-			// TODO: (after v3) the same about non physical items
-		}
-
-		$order->subtotal_ex_tax = $cart->data->base_amount;
-		$order->subtotal_inc_tax = $cart->data->base_amount;
-
-		$order->total_inc_tax = $cart->data->base_amount + $shipping_cost;
-		$order->total_ex_tax = $cart->data->base_amount + $shipping_cost;
-
-		$order->shipping_cost_ex_tax = $shipping_cost;
-		$order->shipping_cost_inc_tax = $shipping_cost;
-		$order->base_shipping_cost = $shipping_cost;
-		$order->order_is_digital = false;
-
-		$order->billing_address = new stdClass();
-		$order->billing_address->first_name = $bolt_billing_address->first_name;
-		$order->billing_address->last_name = $bolt_billing_address->last_name;
-		//Bolt can't add company name to address
-		$order->billing_address->company = "";
-		$order->billing_address->street_1 = $bolt_billing_address->street_address1;
-		$order->billing_address->street_2 = $bolt_billing_address->street_address2;
-		$order->billing_address->city = $bolt_billing_address->locality;
-		$order->billing_address->state = $bolt_billing_address->region;
-		$order->billing_address->zip = $bolt_billing_address->postal_code;
-		$order->billing_address->country = $bolt_billing_address->country;
-		$order->billing_address->country_iso2 = $bolt_billing_address->country_code;
-		$order->billing_address->phone = $bolt_billing_address->phone;
-		$order->billing_address->email = $bolt_billing_address->email;
-
-		// add shipping method (text)
-		$order->shipping_addresses[] = clone $order->billing_address;
-		$order->shipping_addresses[0]->shipping_method = $shipping_method;
-
-
-		BCClient::failOnError( true );
-		BoltLogger::write( json_encode( $order ) );
-		BoltLogger::write( "<P>bc_order" );
-		try {
-			$bc_order = BCClient::createResource( '/v2/orders', $order );
-			BoltLogger::write( print_r( $bc_order, true ) );
-		} catch (Exception $ex) {
-			BoltLogger::write( "!!" );
-			BoltLogger::write( $ex );
-		}
 		//save Bigcommerce order id
-		add_option( "bolt_order_{$bolt_reference}", $bc_order->id );
+		add_option( "bolt_order_{$bolt_reference}", $order_id );
+		BoltLogger::write( "add_option( \"bolt_order_{$bolt_reference}\", $order_id )" );
 
+		//delete cart (it doesn't delete itself altough according to the documentation it should
 		BCClient::deleteResource( "/v3/carts/{$bigcommerce_cart_id}" );
 
-		$result["order_id"] = $bc_order->id;
+		$result["order_id"] = $order_id;
 		return $result;
 	}
 

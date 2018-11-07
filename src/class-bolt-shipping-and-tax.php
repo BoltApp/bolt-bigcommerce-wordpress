@@ -6,7 +6,8 @@ if ( !defined( 'ABSPATH' ) ) {
 
 class Bolt_Shipping_And_Tax
 {
-	public function __construct() {
+	public function __construct()
+	{
 		add_action( 'rest_api_init', array( $this, 'register_endpoints' ) );
 	}
 
@@ -18,96 +19,129 @@ class Bolt_Shipping_And_Tax
 		) );
 	}
 
+	private function convert_bolt_address_to_bc( $bolt_address )
+	{
+		$bc_address = new stdClass();
+		$bc_address->first_name = $bolt_address->first_name;
+		$bc_address->last_name = $bolt_address->last_name;
+		$bc_address->company = "";
+		$bc_address->address1 = $bolt_address->street_address1;
+		$bc_address->address2 = $bolt_address->street_address2;
+		$bc_address->city = $bolt_address->locality;
+		$bc_address->state_or_province = $bolt_address->region;
+		$bc_address->postal_code = $bolt_address->postal_code;
+		$bc_address->country = $bolt_address->country;
+		$bc_address->country_code = $bolt_address->country_code;
+		$bc_address->phone = $bolt_address->phone;
+		$bc_address->email = $bolt_address->email;
+		return $bc_address;
+	}
+
+	private function address_is_change( $api_address, $new_address )
+	{
+		$properties = array( 'first_name', 'last_name', 'company', 'address1', 'address2', 'city', 'state_or_province', 'postal_code', 'country', 'country_code', 'phone', 'email' );
+		foreach ( $properties as $property ) {
+			if ( !property_exists( $api_address, $property ) || $api_address->{$property} <> $new_address->{$property} ) {
+				ob_start();
+				var_dump( $api_address->{$property} );
+				var_dump( $api_address->{$property} );
+				$dump = ob_get_clean();
+				BoltLogger::write( "address_is_change {$property} {$dump}" . print_r( $api_address, true ) . " " . print_r( $new_address, true ) );
+				return true;
+			}
+		}
+		return false;
+	}
+
 	//return shipping methods
-	function handler_shipping_tax()	{
+	function handler_shipping_tax()
+	{
 		//TODO (after v3) work with states maybe https://developer.bigcommerce.com/api/v3/#/reference/checkout/early-access-server-to-server-checkout/add-a-new-consignment-to-checkout
 		//TODO (wait) error with product types: always unknown https://app.asana.com/0/0/895580293902646/f
 		//TODO (after v3) deal with shipping discount https://store-5669f02hng.mybigcommerce.com/manage/marketing/discounts/create
 		//TODO (after v3) return "no shipping required" as option if all products are digital
 		//TODO (wait) work with taxes https://app.asana.com/0/0/895580293902645/f
+		BugsnagHelper::initBugsnag();
 		$hmacHeader = @$_SERVER['HTTP_X_BOLT_HMAC_SHA256'];
 		$signatureVerifier = new \BoltPay\SignatureVerifier(
 			\BoltPay\Bolt::$signingSecret
 		);
-
 		$bolt_order_json = file_get_contents( 'php://input' );
 		$bolt_order = json_decode( $bolt_order_json );
+
 		BoltLogger::write( "handler_shipping_tax " . print_r( $bolt_order, true ) );
 
 		if ( !$signatureVerifier->verifySignature( $bolt_order_json, $hmacHeader ) ) {
 			throw new Exception( "Failed HMAC Authentication" );
 		}
-		// TODO: (later) add validation from wooplugin like $region = bolt_addr_helper()->get_region_code( $country_code, $bolt_order->shipping_address->region ? :'');
-		$country_code = $bolt_order->shipping_address->country_code;
-		$post_code = $bolt_order->shipping_address->postal_code;
-		$region = $bolt_order->shipping_address->region;
 
+		//get Bigcommerce checkout
+		$bigcommerce_cart_id = get_option( "bolt_cart_id_" . $bolt_order->cart->items[0]->reference );
+		BoltLogger::write( "{$bigcommerce_cart_id} = get_option( \"bolt_cart_id_\" . {$bolt_order->cart->items[0]->reference} )" );
 
-		// TODO: (after v3) think about cache /shipping/zones
-		$shipping_zones = BCClient::getCollection( '/v2/shipping/zones' );
+		$checkout = BCClient::getCollection( "/v3/checkouts/{$bigcommerce_cart_id}" );
+		BoltLogger::write( "checkout = BCClient::getCollection( \"/v3/checkouts/{$bigcommerce_cart_id}\" );" );
+		BoltLogger::write( "get checkout " . print_r( $checkout, true ) );
 
-		// look for shipping zone contains specific country
-		$shipping_zone_id = 0;
-		foreach ( $shipping_zones as $zone_id => $shipping_zone ) {
-			if ( "global" == $shipping_zone->type ) {
-				//shipping zone for rest of word. it uses if we don't find zone contains specific country
-				$rest_shipping_zone_id = $shipping_zone->id;
-				continue;
-			}
-			foreach ( $shipping_zone->locations as $location ) {
-				if ( $location->country_iso2 == $country_code ) {
-					$shipping_zone_id = $shipping_zone->id;
-					break 2;
-				}
-			}
+		//files names differ between BC v2 and v3 API. For example country_code <==> country_iso2
+
+		$address = $this->convert_bolt_address_to_bc( $bolt_order->cart->billing_address );
+		//TODO (after v3): If checkout bolt cart is different from BC cart use checkout bolt cart
+
+		if ( $this->address_is_change( $checkout->data->billing_address, $address ) ) {
+			//add or update billing address
+			$checkout = BCClient::createResource( "/v3/checkouts/{$bigcommerce_cart_id}/billing-address", $address );
+			BoltLogger::write( "add billing address /v3/checkouts/{$bigcommerce_cart_id}/billing-address" );
+			BoltLogger::write( "add billing address answer " . print_r( $checkout, true ) );
 		}
-		if ( !$shipping_zone_id ) {
-			$shipping_zone_id = $rest_shipping_zone_id;
+		//Add or update consignment to Checkout
+		$consignment = new stdClass();
+		//In Bolt  the shipping address is the same as the billing address
+		$consignment->shipping_address = $address;
+		//send all physical products to this address
+		$physical_items = $checkout->data->cart->line_items->physical_items;
+		foreach ( $physical_items as $physical_item ) {
+			$consignment->line_items[] = array(
+				"item_id" => $physical_item->id,
+				"quantity" => $physical_item->quantity,
+			);
 		}
-		//get shipping methods for selected shipping zone
-		$shipping_methods = BCClient::getCollection( "/v2/shipping/zones/{$shipping_zone_id}/methods" );
-		BoltLogger::write( "shipping_methods " . print_r( $shipping_methods, true ) );
+		if ( !isset( $checkout->data->consignments[0] ) ) { //consignment not created
+			$params = array( $consignment );
+			BoltLogger::write( "Add a New Consignment /v3/checkouts/{$bigcommerce_cart_id}/consignments?include=consignments.available_shipping_options" );
+			BoltLogger::write( json_encode( $params ) );
+			$checkout = BCClient::createResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments?include=consignments.available_shipping_options", $params );
+			BoltLogger::write( "Add a New Consignment answer " . print_r( $checkout, true ) );
+		} else {
+			$consignment_id = $checkout->data->consignments[0]->id;
+			BoltLogger::write( "UPDATE Consignment /v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options" );
+			BoltLogger::write( json_encode( $consignment ) );
+			$checkout = BCClient::updateResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $consignment );
+			BoltLogger::write( "New Consignment update answer " . print_r( $checkout, true ) );
+		}
+		$shipping_options = $checkout->data->consignments[0]->available_shipping_options;
 		$bolt_shipping_options = array();
-		// TODO: (after V3) now code works only with 'flat rate - per order' and 'free shipping'. works with other delivery methods
-		if ( $shipping_zone->free_shipping && $shipping_zone->free_shipping->enabled ) {
+		foreach ( $shipping_options as $shipping_option ) {
 			$bolt_shipping_options[] = array(
-				"service" => "Free Shipping - Free",
-				"reference" => "freeshipping_freeshipping",
-				"cost" => 0,
+				"service" => $shipping_option->description, //'Flat Rate - Fixed',
+				"reference" => $shipping_option->id,
+				"cost" => $shipping_option->cost * 100,
 				"tax_amount" => 0,
 			);
 		}
-		foreach ( $shipping_methods as $shipping_method ) {
-			if ( $shipping_method->enabled ) {
-				switch ($shipping_method->type) {
-					case "perorder":
-						$bolt_shipping_options[] = array(
-							"service" => $shipping_method->name, //'Flat Rate - Fixed',
-							"reference" => "perorder",
-							"cost" => $shipping_method->settings->rate * 100,
-							"tax_amount" => 0,
-						);
-						break;
-					case "peritem":
-						$kolitem = 0;
-						foreach ( $bolt_order->cart->items as $item ) {
-							if ( $item->type <> "digital" ) {
-								$kolitem += $item->quantity;
-							}
-						}
-						$bolt_shipping_options[] = array(
-							"service" => $shipping_method->name, //'Flat Rate - Fixed',
-							"reference" => "peritem",
-							"cost" => $shipping_method->settings->rate * $kolitem * 100,
-							"tax_amount" => 0,
-						);
-						break;
-				}
-			}
-		}
-		$response = array( "shipping_options" => $bolt_shipping_options );
+		$cart_tax = (int)(($checkout->data->cart->cart_amount_inc_tax - $checkout->data->cart->cart_amount_ex_tax) * 100);
 
-		wp_send_json( $response );
+		//$shipping_and_tax_payload = array( "shipping_options" => $bolt_shipping_options );
+
+		$shipping_and_tax_payload = (object)array(
+			'tax_result' => (object)array(
+				'amount' => $cart_tax
+			),
+			'shipping_options' => $bolt_shipping_options,
+		);
+
+		BoltLogger::write( "respomse shipping options" . print_r( $shipping_and_tax_payload, true ) );
+		wp_send_json( $shipping_and_tax_payload );
 	}
 
 }
