@@ -38,7 +38,7 @@ class Bolt_Generate_Order_Token
 		//Discounts for product: show only discounted price as well as in bolt-woocommerce
 		//Discounts for cart: show only total discount (Bigcommerce restrictions)
 		//Coupon codes: customer can use it only after press "Bigcommerce process to checkout"
-		if ( $bigcommerce_cart["discount_amount"] ) {
+		if ( $bigcommerce_cart["discount_amount"]["raw"] ) {
 			$cart["discounts"][] = array(
 				"amount" => (int)($bigcommerce_cart["discount_amount"]["raw"] * 100),
 				"description" => "Discount",
