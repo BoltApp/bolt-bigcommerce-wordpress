@@ -19,9 +19,9 @@ class Bolt_Generate_Order_Token
 	//before "</footer>"
 	function bolt_cart_button( $bigcommerce_cart )
 	{
-		//echo "#2"; exit;
 		//TODO: (later) If the cart changes without page reload handle then send to Bolt the new cart
 		//In bolt-woocommerce we use page reload at event 'updated_cart_totals' but I don't see JS event on bigcommerce-wordpress
+		BoltLogger::write( "bolt_cart_button " . print_r( $bigcommerce_cart, true ) );
 
 		$currency_code = get_option( BigCommerce\Settings\Sections\Currency::CURRENCY_CODE, '' );
 
@@ -30,8 +30,8 @@ class Bolt_Generate_Order_Token
 			"order_reference" => $order_reference,
 			"display_id" => $order_reference,
 			"currency" => $currency_code,
-			"total_amount" => round( $bigcommerce_cart["cart_amount"]["raw"] * 100 ),
-			"tax_amount" => round( $bigcommerce_cart["tax_amount"]["raw"] * 100 ),
+			"total_amount" => (int)($bigcommerce_cart["cart_amount"]["raw"] * 100),
+			"tax_amount" => (int)($bigcommerce_cart["tax_amount"]["raw"] * 100),
 			"discounts" => array(),
 		);
 
@@ -40,7 +40,7 @@ class Bolt_Generate_Order_Token
 		//Coupon codes: customer can use it only after press "Bigcommerce process to checkout"
 		if ( $bigcommerce_cart["discount_amount"] ) {
 			$cart["discounts"][] = array(
-				"amount" => (int)(round( $bigcommerce_cart["discount_amount"]["raw"] * 100 )),
+				"amount" => (int)($bigcommerce_cart["discount_amount"]["raw"] * 100),
 				"description" => "Discount",
 			);
 		}
@@ -53,12 +53,12 @@ class Bolt_Generate_Order_Token
 				$type = "physical";
 			}
 			$cart["items"][] = array(
-				"reference" => $order_reference,
+				"reference" => (string)$item["product_id"],
 				"name" => $item["name"],
 				"sku" => $item["sku"]["product"],
 				"description" => "",
-				"total_amount" => round( $item["total_sale_price"]["raw"] * 100 ),
-				"unit_price" => round( $item["sale_price"]["raw"] * 100 ),
+				"total_amount" => (int)($item["total_sale_price"]["raw"] * 100),
+				"unit_price" => (int)($item["sale_price"]["raw"] * 100),
 				"quantity" => $item["quantity"],
 				"type" => $type,
 			);
@@ -77,6 +77,7 @@ class Bolt_Generate_Order_Token
 		if ( !$orderToken ) {
 			echo "error Bolt order create";
 			print_r( $response );
+			print_r( $cartData );
 			print_r( $bigcommerce_cart );
 			exit;
 		}

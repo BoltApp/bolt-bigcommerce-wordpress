@@ -76,7 +76,7 @@ class Bolt_Shipping_And_Tax
 		}
 
 		//get Bigcommerce checkout
-		$bigcommerce_cart_id = get_option( "bolt_cart_id_" . $bolt_order->cart->items[0]->reference );
+		$bigcommerce_cart_id = get_option( "bolt_cart_id_" . $bolt_order->cart->order_reference );
 		BoltLogger::write( "{$bigcommerce_cart_id} = get_option( \"bolt_cart_id_\" . {$bolt_order->cart->items[0]->reference} )" );
 
 		$checkout = BCClient::getCollection( "/v3/checkouts/{$bigcommerce_cart_id}" );
