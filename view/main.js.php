@@ -34,7 +34,7 @@
         "orderToken": "<?= $orderToken;?>",
         "authcapture": true
     };
-    var hints = {};
+    var hints = <?= $hints;?>;
     var callbacks = {
         check: function () {
             // This function is called just before the checkout form loads.

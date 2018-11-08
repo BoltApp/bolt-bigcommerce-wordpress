@@ -86,10 +86,51 @@ class Bolt_Generate_Order_Token
 		$updated = update_option( "bolt_cart_id_" . $order_reference, $bigcommerce_cart["cart_id"] );
 		BoltLogger::write( "cart_id={$bigcommerce_cart["cart_id"]}" );
 
+		$hints = $this->calculate_hints();
+
 		echo '<div class="bolt-checkout-button with-cards"></div>';
 		echo \BoltPay\Helper::renderBoltTrackScriptTag();
 		echo \BoltPay\Helper::renderBoltConnectScriptTag();
-		$this->render( "main.js.php", array( "orderToken" => $orderToken ) );
+		$this->render( "main.js.php", array( "orderToken" => $orderToken, "hints" => $hints ) );
+	}
+
+	private function calculate_hints()
+	{
+		$current_user = wp_get_current_user();
+		if ( 0 == $current_user->ID ) {
+			return "{}";
+		} else {
+			/*
+			var hints = {
+				"prefill": {
+					"firstName": "Bolt",
+    "lastName": "User",
+    "email": "email@example.com",
+    "phone": "1112223333",
+    "addressLine1": "1235 Howard St",
+    "addressLine2": "Unit D",
+    "city": "San Francisco",
+    "state": "California",
+    "zip": "94103",
+    "country": "US" // ISO Alpha-2 format expected
+  }
+};*/
+			$prefill = array();
+			if (isset($current_user->user_firstname)) {
+				$prefill["firstName"] = $current_user->user_firstname;
+			}
+			if (isset($current_user->user_lastname)) {
+				$prefill["lastName"] = $current_user->user_lastname;
+			}
+			if (isset($current_user->user_lastname)) {
+				$prefill["email"] = $current_user->user_email;
+			}
+			if (empty($prefill)) {
+				return "{}";
+			} else {
+				return json_encode((object)array("prefill"=>(object)$prefill));
+			}
+		}
 	}
 
 	//render template
