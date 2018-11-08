@@ -142,12 +142,14 @@ class Bolt_Save_Order
 			return $result;
 		}
 
-		$consignment_id = $checkout->data->consignments[0]->id;
-		$body = (object)array( "shipping_option_id" => $shipping_option_id );
-		BoltLogger::write( "UPDATE Consignment /v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options" );
-		BoltLogger::write( json_encode( $body ) );
-		$checkout = BCClient::updateResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $body );
-		BoltLogger::write( "New Consignment update answer " . print_r( $checkout, true ) );
+		if ("no_shipping" <> $shipping_option_id) {
+			$consignment_id = $checkout->data->consignments[0]->id;
+			$body = (object)array( "shipping_option_id" => $shipping_option_id );
+			BoltLogger::write( "UPDATE Consignment /v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options" );
+			BoltLogger::write( json_encode( $body ) );
+			$checkout = BCClient::updateResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $body );
+			BoltLogger::write( "New Consignment update answer " . print_r( $checkout, true ) );
+		}
 
 		BoltLogger::write( "CREATE ORDER /v3/checkouts/{$bigcommerce_cart_id}/orders" );
 		$order = BCClient::createResource( "/v3/checkouts/{$bigcommerce_cart_id}/orders" );
