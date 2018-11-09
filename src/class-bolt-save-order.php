@@ -259,6 +259,7 @@ class Bolt_Save_Order
 			# Disable option autoloading
 			$wpdb->query( "UPDATE {$wpdb->options} SET autoload='no' WHERE option_name LIKE 'bolt_order_%'" );
 			$wpdb->query( "UPDATE {$wpdb->options} SET autoload='no' WHERE option_name LIKE 'bolt_cart_id_%'" );
+			$wpdb->query( "UPDATE {$wpdb->options} SET autoload='no' WHERE option_name LIKE 'bolt_shipping_and_tax_%'");
 
 			# Queue these rows to be deleted after 72 hours.
 			# We leave them for that long in case they are current orders being processed, or pending review over the weekend.
@@ -267,6 +268,7 @@ class Bolt_Save_Order
 			BoltLogger::write( "update_option('delete_bolt_order_resources', " . implode( ",", $wpdb->get_col( "SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_order_%'" ) ) );
 			update_option( 'delete_bolt_cart_id_resources', implode( ",", $wpdb->get_col( "SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_cart_id_%'" ) ), false );
 			BoltLogger::write( "update_option('delete_bolt_cart_id_resources', " . implode( ",", $wpdb->get_col( "SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_cart_id_%'" ) ) );
+			update_option('delete_bolt_shipping_and_tax_resources', implode(",", $wpdb->get_col("SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_shipping_and_tax_%'")), false);
 
 			update_option( 'has_initiated_clearing_historic_bolt_resources', true );
 		}
@@ -276,6 +278,8 @@ class Bolt_Save_Order
 			# Remove expired data from abandoned carts
 			$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'bolt_order_%' AND option_id IN (" . get_option( 'delete_bolt_order_resources' ) . ")" );
 			$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'bolt_cart_id_%' AND option_id IN (" . get_option( 'delete_bolt_cart_id_resources' ) . ")" );
+			$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'bolt_shipping_and_tax_%' AND option_id IN (".get_option('delete_bolt_shipping_and_tax_resources').")" );
+
 
 			delete_option( 'delete_bolt_resources_time' );
 

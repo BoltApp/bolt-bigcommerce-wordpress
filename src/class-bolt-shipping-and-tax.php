@@ -75,6 +75,14 @@ class Bolt_Shipping_And_Tax
 			throw new Exception( "Failed HMAC Authentication" );
 		}
 
+		//try get data from cache
+		$bolt_cart_md5 = md5( $bolt_order_json );
+		if ( ($cached_estimate = get_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5 )) ) {
+			BoltLogger::write( "return shipping_and_tax value from cache" );
+			wp_send_json( json_decode( $cached_estimate ) );
+		}
+
+
 		//get Bigcommerce checkout
 		$bigcommerce_cart_id = get_option( "bolt_cart_id_" . $bolt_order->cart->order_reference );
 		BoltLogger::write( "{$bigcommerce_cart_id} = get_option( \"bolt_cart_id_\" . {$bolt_order->cart->order_reference} )" );
@@ -135,10 +143,9 @@ class Bolt_Shipping_And_Tax
 					$checkout_cost = BCClient::updateResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $body );
 					BoltLogger::write( "UPDATE Consignment for calculate tax amount answer " . print_r( $checkout_cost, true ) );
 					$tax_amount = (int)(($checkout_cost->data->consignments[0]->shipping_cost_inc_tax - $checkout_cost->data->consignments[0]->shipping_cost_ex_tax) * 100);
-					BoltLogger::write("tax_amount = $tax_amount = (int)({$checkout_cost->data->consignments[0]->shipping_cost_inc_tax} - {$checkout_cost->data->consignments[0]->shipping_cost_ex_tax}) * 100;");
 				}
 				$bolt_shipping_options[] = array(
-					"service" => $shipping_option->description, //'Flat Rate - Fixed',
+					"service" => $shipping_option->description,
 					"reference" => $shipping_option->id,
 					"cost" => $cost,
 					"tax_amount" => $tax_amount,
@@ -162,6 +169,9 @@ class Bolt_Shipping_And_Tax
 			),
 			'shipping_options' => $bolt_shipping_options,
 		);
+
+		# Cache the shipping and tax response in case of a timed out request
+		update_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5, json_encode( $shipping_and_tax_payload ), false );
 
 		BoltLogger::write( "response shipping options" . print_r( $shipping_and_tax_payload, true ) );
 		wp_send_json( $shipping_and_tax_payload );
