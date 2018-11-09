@@ -30,8 +30,8 @@ class Bolt_Generate_Order_Token
 			"order_reference" => $order_reference,
 			"display_id" => $order_reference,
 			"currency" => $currency_code,
-			"total_amount" => (int)($bigcommerce_cart["cart_amount"]["raw"] * 100),
-			"tax_amount" => (int)($bigcommerce_cart["tax_amount"]["raw"] * 100),
+			"total_amount" => (int)round($bigcommerce_cart["cart_amount"]["raw"] * 100),
+			"tax_amount" => (int)round($bigcommerce_cart["tax_amount"]["raw"] * 100),
 			"discounts" => array(),
 		);
 
@@ -40,7 +40,7 @@ class Bolt_Generate_Order_Token
 		//Coupon codes: customer can use it only after press "Bigcommerce process to checkout"
 		if ( $bigcommerce_cart["discount_amount"]["raw"] ) {
 			$cart["discounts"][] = array(
-				"amount" => (int)($bigcommerce_cart["discount_amount"]["raw"] * 100),
+				"amount" => (int)round($bigcommerce_cart["discount_amount"]["raw"] * 100),
 				"description" => "Discount",
 			);
 		}

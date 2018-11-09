@@ -133,7 +133,7 @@ class Bolt_Shipping_And_Tax
 			}
 			$shipping_options = $checkout->data->consignments[0]->available_shipping_options;
 			foreach ( $shipping_options as $shipping_option ) {
-				$cost = (int)$shipping_option->cost * 100;
+				$cost = (int)round($shipping_option->cost * 100);
 				$tax_amount = 0;
 				if ( $cost > 0 ) {
 					//get tax amount for this shipping option
@@ -142,7 +142,7 @@ class Bolt_Shipping_And_Tax
 					BoltLogger::write( json_encode( $body ) );
 					$checkout_cost = BCClient::updateResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $body );
 					BoltLogger::write( "UPDATE Consignment for calculate tax amount answer " . print_r( $checkout_cost, true ) );
-					$tax_amount = (int)(($checkout_cost->data->consignments[0]->shipping_cost_inc_tax - $checkout_cost->data->consignments[0]->shipping_cost_ex_tax) * 100);
+					$tax_amount = (int)round(($checkout_cost->data->consignments[0]->shipping_cost_inc_tax - $checkout_cost->data->consignments[0]->shipping_cost_ex_tax) * 100);
 				}
 				$bolt_shipping_options[] = array(
 					"service" => $shipping_option->description,
@@ -159,7 +159,7 @@ class Bolt_Shipping_And_Tax
 				"tax_amount" => 0,
 			);
 		}
-		$cart_tax = (int)(($checkout->data->cart->cart_amount_inc_tax - $checkout->data->cart->cart_amount_ex_tax) * 100);
+		$cart_tax = (int)round(($checkout->data->cart->cart_amount_inc_tax - $checkout->data->cart->cart_amount_ex_tax) * 100);
 
 		//$shipping_and_tax_payload = array( "shipping_options" => $bolt_shipping_options );
 
