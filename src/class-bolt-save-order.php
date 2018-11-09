@@ -7,10 +7,12 @@ if ( !defined( 'ABSPATH' ) ) {
 //Save order in Bigcommerce
 class Bolt_Save_Order
 {
+	private $confirmation_page;
 	public function __construct()
 	{
 		add_action( 'rest_api_init', array( $this, 'register_endpoints' ) );
 		$this->init_public_ajax();
+		$this->confirmation_page = New Bolt_Confirmation_Page();
 	}
 
 	public function register_endpoints()
@@ -72,7 +74,7 @@ class Bolt_Save_Order
 			//$custom_status = "Recently Rejected";
 		} else if ( ("payment" == $bolt_type) && ("completed" == $bolt_status) ) {
 			$order = BCClient::getCollection( "/v2/orders/{$order_id}" );
-			BoltLogger::write( "order in order_set_status" . print_r( $checkout, true ) );
+			BoltLogger::write( "order in order_set_status" . print_r( $order, true ) );
 			if ( $order->order_is_digital ) {
 				$new_status_id = 10; // Completed
 			} else {
@@ -85,7 +87,7 @@ class Bolt_Save_Order
 		if ( $new_status_id && $order->id != $new_status_id ) {
 			$body = array( "status_id" => $new_status_id );
 			BoltLogger::write( "Order {$order_id} 
-			Change status From {$order->status_id} ({$order->status}) TO {$new_status_id} {$custom_status} " . json_encode( $body ) );
+			Change status From {$order->status_id} ({$order->status}) TO {$new_status_id} " . json_encode( $body ) );
 			BCClient::updateResource( "/v2/orders/{$order_id}", $body );
 		} else {
 			BoltLogger::write( "order status was actual" );
@@ -179,18 +181,25 @@ class Bolt_Save_Order
 	}
 
 	//AJAX success callback
+
+	/**
+	 *
+	 */
 	function save_order()
 	{
 		BoltLogger::write( "save_order POST" . print_r( $_POST, true ) );
 		$bolt_data = json_decode( stripslashes( $_POST["transaction_details"] ) );
 		BoltLogger::write( "transaction_details" . print_r( $bolt_data, true ) );
 		$result = $this->bolt_create_order( $bolt_data->reference, $bolt_data->cart->order_reference, $bolt_data, true );
+		//Write order id to session. We'll read it on confirmation page
+		$_SESSION["bolt_order_id"] = $result["order_id"];
+		BoltLogger::write("\$_SESSION[\"bolt_order_id\"] = {$result["order_id"]};");
 		BoltLogger::write( "result in save order" . print_r( $result, true ) );
 		$this->clean_up_archaic_resources_async();
 		wp_send_json( array(
 			'result' => 'success',
 			// TODO: (after v3) create this order confirmation page
-			'redirect_url' => get_site_url() . "/success",
+			'redirect_url' => $this->confirmation_page->get_url(),
 		) );
 	}
 

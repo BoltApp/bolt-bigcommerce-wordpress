@@ -9,7 +9,6 @@ class Bolt_Generate_Order_Token
 
 	public function __construct()
 	{
-		//echo "#1"; exit;
 		BugsnagHelper::initBugsnag();
 		add_action( 'bigcommerce/cart/proceed_to_checkout', array( $this, 'bolt_cart_button' ) );
 	}

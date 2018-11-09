@@ -37,10 +37,10 @@ if ( in_array( 'bigcommerce-for-wordpress/bigcommerce.php', apply_filters( 'acti
 	require_once(dirname( __FILE__ ) . '/src/BugsnagHelper.php');
 	require_once(dirname( __FILE__ ) . '/src/class-bolt-logger.php');
 
+	require_once(dirname( __FILE__ ) . '/src/class-bolt-confirmation-page.php');
 
 	$bolt_bigcommerce->init();
 }
-
  
  
 
