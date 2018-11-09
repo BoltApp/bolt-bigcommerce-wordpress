@@ -71,7 +71,13 @@ class Bolt_Save_Order
 			$new_status_id = 12; // Manual Verification Required
 			//$custom_status = "Recently Rejected";
 		} else if ( ("payment" == $bolt_type) && ("completed" == $bolt_status) ) {
-			$new_status_id = 11; // Awaiting Fulfillment
+			$order = BCClient::getCollection( "/v2/orders/{$order_id}" );
+			BoltLogger::write( "order in order_set_status" . print_r( $checkout, true ) );
+			if ( $order->order_is_digital ) {
+				$new_status_id = 10; // Completed
+			} else {
+				$new_status_id = 11; // Awaiting Fulfillment
+			}
 		} else if ( "rejected_irreversible" == $bolt_type ) {
 			$new_status_id = 6; // Declined
 		}
@@ -142,7 +148,7 @@ class Bolt_Save_Order
 			return $result;
 		}
 
-		if ("no_shipping" <> $shipping_option_id) {
+		if ( "no_shipping" <> $shipping_option_id ) {
 			$consignment_id = $checkout->data->consignments[0]->id;
 			$body = (object)array( "shipping_option_id" => $shipping_option_id );
 			BoltLogger::write( "UPDATE Consignment /v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options" );
@@ -259,7 +265,7 @@ class Bolt_Save_Order
 			# Disable option autoloading
 			$wpdb->query( "UPDATE {$wpdb->options} SET autoload='no' WHERE option_name LIKE 'bolt_order_%'" );
 			$wpdb->query( "UPDATE {$wpdb->options} SET autoload='no' WHERE option_name LIKE 'bolt_cart_id_%'" );
-			$wpdb->query( "UPDATE {$wpdb->options} SET autoload='no' WHERE option_name LIKE 'bolt_shipping_and_tax_%'");
+			$wpdb->query( "UPDATE {$wpdb->options} SET autoload='no' WHERE option_name LIKE 'bolt_shipping_and_tax_%'" );
 
 			# Queue these rows to be deleted after 72 hours.
 			# We leave them for that long in case they are current orders being processed, or pending review over the weekend.
@@ -268,7 +274,7 @@ class Bolt_Save_Order
 			BoltLogger::write( "update_option('delete_bolt_order_resources', " . implode( ",", $wpdb->get_col( "SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_order_%'" ) ) );
 			update_option( 'delete_bolt_cart_id_resources', implode( ",", $wpdb->get_col( "SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_cart_id_%'" ) ), false );
 			BoltLogger::write( "update_option('delete_bolt_cart_id_resources', " . implode( ",", $wpdb->get_col( "SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_cart_id_%'" ) ) );
-			update_option('delete_bolt_shipping_and_tax_resources', implode(",", $wpdb->get_col("SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_shipping_and_tax_%'")), false);
+			update_option( 'delete_bolt_shipping_and_tax_resources', implode( ",", $wpdb->get_col( "SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_shipping_and_tax_%'" ) ), false );
 
 			update_option( 'has_initiated_clearing_historic_bolt_resources', true );
 		}
@@ -278,7 +284,7 @@ class Bolt_Save_Order
 			# Remove expired data from abandoned carts
 			$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'bolt_order_%' AND option_id IN (" . get_option( 'delete_bolt_order_resources' ) . ")" );
 			$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'bolt_cart_id_%' AND option_id IN (" . get_option( 'delete_bolt_cart_id_resources' ) . ")" );
-			$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'bolt_shipping_and_tax_%' AND option_id IN (".get_option('delete_bolt_shipping_and_tax_resources').")" );
+			$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'bolt_shipping_and_tax_%' AND option_id IN (" . get_option( 'delete_bolt_shipping_and_tax_resources' ) . ")" );
 
 
 			delete_option( 'delete_bolt_resources_time' );
