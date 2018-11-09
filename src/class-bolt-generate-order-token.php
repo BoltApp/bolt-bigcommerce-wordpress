@@ -94,41 +94,57 @@ class Bolt_Generate_Order_Token
 		$this->render( "main.js.php", array( "orderToken" => $orderToken, "hints" => $hints ) );
 	}
 
+	private function copy_object_to_array( $source, $parameters )
+	{
+		$result = array();
+		foreach ( $parameters as $from => $to ) {
+			if ( isset( $source->$from ) ) {
+				$result[$to] = $source->$from;
+			}
+		}
+		return $result;
+	}
+
 	private function calculate_hints()
 	{
 		$current_user = wp_get_current_user();
 		if ( 0 == $current_user->ID ) {
 			return "{}";
 		} else {
-			/*
-			var hints = {
-				"prefill": {
-					"firstName": "Bolt",
-    "lastName": "User",
-    "email": "email@example.com",
-    "phone": "1112223333",
-    "addressLine1": "1235 Howard St",
-    "addressLine2": "Unit D",
-    "city": "San Francisco",
-    "state": "California",
-    "zip": "94103",
-    "country": "US" // ISO Alpha-2 format expected
-  }
-};*/
-			$prefill = array();
-			if (isset($current_user->user_firstname)) {
-				$prefill["firstName"] = $current_user->user_firstname;
+			//get user address from Bigcommperce by API
+			$bc_customer_id = get_user_option( 'bigcommerce_customer_id', $current_user->ID );
+			if ( $bc_customer_id ) {
+				$addresses = BCClient::getCollection( "/v2/customers/{$bc_customer_id}/addresses" );
+				$prefill = $this->copy_object_to_array( $addresses[0], array(
+					"first_name" => "firstName",
+					"last_name" => "addressLine1",
+					"street_1" => "addressLine1",
+					"street_2" => "addressLine2",
+					"city" => "city",
+					"state" => "state",
+					"zip" => "zip",
+					"country_iso2" => "country",
+					"phone" => "phone" ) );
+			} else {
+				$prefill = array();
 			}
-			if (isset($current_user->user_lastname)) {
-				$prefill["lastName"] = $current_user->user_lastname;
+			//if BC doesn't have information get name from Wordpress
+			if ( empty( $prefill ) ) {
+				if ( isset( $current_user->user_firstname ) ) {
+					$prefill["firstName"] = $current_user->user_firstname;
+				}
+				if ( isset( $current_user->user_lastname ) ) {
+					$prefill["lastName"] = $current_user->user_lastname;
+				}
 			}
-			if (isset($current_user->user_lastname)) {
+
+			if ( isset( $current_user->user_email ) ) {
 				$prefill["email"] = $current_user->user_email;
 			}
-			if (empty($prefill)) {
+			if ( empty( $prefill ) ) {
 				return "{}";
 			} else {
-				return json_encode((object)array("prefill"=>(object)$prefill));
+				return json_encode( (object)array( "prefill" => (object)$prefill ) );
 			}
 		}
 	}
