@@ -91,7 +91,7 @@ class Bolt_Shipping_And_Tax
 		if ( $this->address_is_change( $checkout->data->billing_address, $address ) ) {
 			//add or update billing address
 			$checkout = BCClient::createResource( "/v3/checkouts/{$bigcommerce_cart_id}/billing-address", $address );
-			BoltLogger::write( "add billing address /v3/checkouts/{$bigcommerce_cart_id}/billing-address ".json_encode($address) );
+			BoltLogger::write( "add billing address /v3/checkouts/{$bigcommerce_cart_id}/billing-address " . json_encode( $address ) );
 			BoltLogger::write( "add billing address answer " . print_r( $checkout, true ) );
 		}
 		//Add or update consignment to Checkout
@@ -101,7 +101,7 @@ class Bolt_Shipping_And_Tax
 		//send all physical products to this address
 		$bolt_shipping_options = array();
 		$physical_items = $checkout->data->cart->line_items->physical_items;
-		if (!empty($physical_items)) { //shipping is required
+		if ( !empty( $physical_items ) ) { //shipping is required
 			foreach ( $physical_items as $physical_item ) {
 				$consignment->line_items[] = array(
 					"item_id" => $physical_item->id,
@@ -114,6 +114,8 @@ class Bolt_Shipping_And_Tax
 				BoltLogger::write( json_encode( $params ) );
 				$checkout = BCClient::createResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments?include=consignments.available_shipping_options", $params );
 				BoltLogger::write( "Add a New Consignment answer " . print_r( $checkout, true ) );
+				$consignment_id = $checkout->data->consignments[0]->id;
+				BoltLogger::write( "New consigment ID {$consignment_id}" );
 			} else {
 				$consignment_id = $checkout->data->consignments[0]->id;
 				BoltLogger::write( "UPDATE Consignment /v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options" );
@@ -123,18 +125,30 @@ class Bolt_Shipping_And_Tax
 			}
 			$shipping_options = $checkout->data->consignments[0]->available_shipping_options;
 			foreach ( $shipping_options as $shipping_option ) {
+				$cost = (int)$shipping_option->cost * 100;
+				$tax_amount = 0;
+				if ( $cost > 0 ) {
+					//get tax amount for this shipping option
+					$body = (object)array( "shipping_option_id" => $shipping_option->id );
+					BoltLogger::write( "UPDATE Consignment for calculate tax amount /v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id" );
+					BoltLogger::write( json_encode( $body ) );
+					$checkout_cost = BCClient::updateResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $body );
+					BoltLogger::write( "UPDATE Consignment for calculate tax amount answer " . print_r( $checkout_cost, true ) );
+					$tax_amount = (int)(($checkout_cost->data->consignments[0]->shipping_cost_inc_tax - $checkout_cost->data->consignments[0]->shipping_cost_ex_tax) * 100);
+					BoltLogger::write("tax_amount = $tax_amount = (int)({$checkout_cost->data->consignments[0]->shipping_cost_inc_tax} - {$checkout_cost->data->consignments[0]->shipping_cost_ex_tax}) * 100;");
+				}
 				$bolt_shipping_options[] = array(
 					"service" => $shipping_option->description, //'Flat Rate - Fixed',
 					"reference" => $shipping_option->id,
-					"cost" => $shipping_option->cost * 100,
-					"tax_amount" => 0,
+					"cost" => $cost,
+					"tax_amount" => $tax_amount,
 				);
 			}
 		} else {
 			$bolt_shipping_options[] = array(
-				"service"   => "no shipping required",
+				"service" => "no shipping required",
 				"reference" => "no_shipping",
-				"cost"      => 0,
+				"cost" => 0,
 				"tax_amount" => 0,
 			);
 		}
