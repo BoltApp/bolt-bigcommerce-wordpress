@@ -13,11 +13,13 @@ class Bolt_Generate_Order_Token
 		add_action( 'bigcommerce/cart/proceed_to_checkout', array( $this, 'bolt_cart_button' ) );
 	}
 
-	//render html and js code for bolt checkout button
-	//code "bolt_cart_button($cart);" added in bigcommerce-for-wordpress-master/public-views/cart.php
-	//before "</footer>"
+	/**
+	 * Render html and js code for bolt checkout button
+	 * @param array $bigcommerce_cart Bigcommerce cart content
+	 */
 	function bolt_cart_button( $bigcommerce_cart )
 	{
+		var_dump($bigcommerce_cart); exit;
 		//TODO: (later) If the cart changes without page reload handle then send to Bolt the new cart
 		//In bolt-woocommerce we use page reload at event 'updated_cart_totals' but I don't see JS event on bigcommerce-wordpress
 		BoltLogger::write( "bolt_cart_button " . print_r( $bigcommerce_cart, true ) );
@@ -44,13 +46,8 @@ class Bolt_Generate_Order_Token
 			);
 		}
 
-
 		foreach ( $bigcommerce_cart["items"] AS $item_id => $item ) {
-			if ( "digital" == $item["bigcommerce_product_type"][0]["label"] ) {
-				$type = "digital";
-			} else {
-				$type = "physical";
-			}
+			$type = ( "digital" == $item["bigcommerce_product_type"][0]["label"] ) ? "digital" : "physical";
 			$cart["items"][] = array(
 				"reference" => (string)$item["product_id"],
 				"name" => $item["name"],
@@ -93,6 +90,14 @@ class Bolt_Generate_Order_Token
 		$this->render( "main.js.php", array( "orderToken" => $orderToken, "hints" => $hints ) );
 	}
 
+	/**
+	 * Create array from object. Map properties according to $parameters
+	 *
+	 * @param object $source     source objects
+	 * @param array  $parameters array with couples "name_from" "name_to"
+	 *
+	 * @return array
+	 */
 	private function copy_object_to_array( $source, $parameters )
 	{
 		$result = array();
@@ -104,6 +109,11 @@ class Bolt_Generate_Order_Token
 		return $result;
 	}
 
+	/**
+	 * If we know customers details calculates it for Bolt JS variable hints
+	 *
+	 * @return string json_encode string for Bolt JS hints
+	 */
 	private function calculate_hints()
 	{
 		$current_user = wp_get_current_user();
@@ -149,6 +159,15 @@ class Bolt_Generate_Order_Token
 	}
 
 	//render template
+
+	/**
+	 * Render template
+	 *
+	 * @param string $template_name
+	 * @param array  $parameters
+	 * @param bool   $render_output true - output, false - return
+	 * @return string rendering template
+	 */
 	public function render( $template_name, array $parameters = array(), $render_output = true )
 	{
 		foreach ( $parameters as $name => $value ) {

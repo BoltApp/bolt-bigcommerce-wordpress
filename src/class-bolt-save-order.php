@@ -15,26 +15,31 @@ class Bolt_Save_Order
 		$this->confirmation_page = New Bolt_Confirmation_Page();
 	}
 
+	/**
+	 * Register wordpress endpoints
+	 */
 	public function register_endpoints()
 	{
-		/**
-		 * Sync and handle bolt API.
-		 */
 		register_rest_route( 'bolt', '/response', array(
 			'methods' => WP_REST_Server::CREATABLE,
 			'callback' => array( $this, 'handler_response' ),
 		) );
 	}
 
-	//Set up public ajax action.
+	/**
+	 * Set up public ajax action
+	 */
 	public function init_public_ajax()
 	{
-		add_action( 'wp_ajax_bolt_create_order', array( $this, 'save_order' ) );
-		add_action( 'wp_ajax_nopriv_bolt_create_order', array( $this, 'save_order' ) );
+		add_action( 'wp_ajax_bolt_create_order', array( $this, 'ajax_bolt_create_order' ) );
+		add_action( 'wp_ajax_nopriv_bolt_create_order', array( $this, 'ajax_bolt_create_order' ) );
 		add_action( 'wp_ajax_bolt_clean_up_resources', array( $this, 'ajax_clean_up_archaic_resources' ) );
 		add_action( 'wp_ajax_nopriv_bolt_clean_up_resources', array( $this, 'ajax_clean_up_archaic_resources' ) );
 	}
 
+	/**
+	 *  Handle Bolt response
+	 */
 	function handler_response()
 	{
 		$hmacHeader = @$_SERVER['HTTP_X_BOLT_HMAC_SHA256'];
@@ -47,16 +52,19 @@ class Bolt_Save_Order
 		BoltLogger::write( print_r( $bolt_data, true ) );
 
 		if ( !$signatureVerifier->verifySignature( $bolt_data_json, $hmacHeader ) ) {
+			//TODO change to Bugsnag exception
 			throw new Exception( "Failed HMAC Authentication" );
 		}
 
 		//create new order
 		$result = $this->bolt_create_order( $bolt_data->reference, $bolt_data->order, $bolt_data );
 
-		$response = new stdClass();
-		$response->status = $result["status"];
-		$response->created_objects = new stdClass();
-		$response->created_objects->merchant_order_ref = $result["order_id"];
+		$response = (object) array(
+			'status' => $result["status"],
+			'created_objects' => (object) array(
+				'merchant_order_ref' => $result["order_id"]
+			)
+		);
 
 		BoltLogger::write( "response: " . print_r( $response, true ) );
 
@@ -64,6 +72,13 @@ class Bolt_Save_Order
 	}
 
 
+	/**
+	 * Set order status
+	 *
+	 * @param int $order_id order id
+	 * @param string $bolt_type parameter from bolt: "rejected_reversible", "payment", "rejected_irreversible"
+	 * @param string $bolt_status parameter from bolt: if $bolt_type=='payment', $bolt_status needs to be "completed"
+	 */
 	function order_set_status( $order_id, $bolt_type, $bolt_status = "" )
 	{
 		BoltLogger::write( "order_set_status( $order_id, $bolt_type, $bolt_status )" );
@@ -94,9 +109,16 @@ class Bolt_Save_Order
 		}
 	}
 
-	//create order in bigcommerce
-	//$bolt_reference - current transaction bolt id (like J7BK-JYZM-4RNF)
-	//$order_reference - id which we sent to bolt when creater order (like BLT5bdc8246d1a52)
+	/**
+	 * Create order in Bigcommerce
+	 *
+	 * @param  string $bolt_reference  current transaction bolt id (like J7BK-JYZM-4RNF)
+	 * @param  string $order_reference id which we sent to bolt when created order (like BLT5bdc8246d1a52)
+	 * @param  array  $bolt_data all data from bolt
+	 * @param  bool   $is_json true - called as JSON, false - called as hook
+	 *
+	 * @return array
+	 */
 	function bolt_create_order( $bolt_reference, $order_reference, $bolt_data, $is_json = false )
 	{
 		$bigcommerce_cart_id = get_option( "bolt_cart_id_" . $order_reference );
@@ -110,17 +132,12 @@ class Bolt_Save_Order
 		if ( $bc_order_id ) {
 			BoltLogger::write( "prevent re-creation order" );
 			$this->order_set_status( $bc_order_id, $bolt_data->type, $bolt_data->status );
-			$response = new stdClass();
-			$response->status = "success";
 			$result["order_id"] = $bc_order_id;
 			return $result;
 		}
 
 		if ( $is_json ) {
-			$bolt_billing_address = $bolt_data->shipping_address;
 			$shipment = $bolt_data->shipping_option->value;
-			$shipping_method = $bolt_data->shipping_option->value->service;
-			$shipping_cost = $bolt_data->shipping_option->value->cost->amount / 100;
 		} else {
 			//get data from Bolt transaction
 			$bolt_client = new \BoltPay\ApiClient( [
@@ -130,13 +147,7 @@ class Bolt_Save_Order
 			$bolt_transaction = $bolt_client->getTransactionDetails( $bolt_reference )->getBody();
 			BoltLogger::write( "bolt_transaction " . print_r( $bolt_transaction, true ) );
 			$bolt_billing_address = $bolt_transaction->order->cart->billing_address;
-			//change names of the properties so they became the same with those obtained by ajax
-			$bolt_billing_address->phone = $bolt_billing_address->phone_number;
-			$bolt_billing_address->email = $bolt_billing_address->email_address;
-
 			$shipment = $bolt_transaction->order->cart->shipments[0];
-			$shipping_method = $bolt_transaction->order->cart->shipments[0]->service;
-			$shipping_cost = $bolt_transaction->order->cart->shipments[0]->cost->amount / 100;
 		}
 		$shipping_option_id = $shipment->reference;
 		BoltLogger::write( "shipment" . print_r( $shipment, true ) );
@@ -150,6 +161,7 @@ class Bolt_Save_Order
 			return $result;
 		}
 
+		//set selected shipping method
 		if ( "no_shipping" <> $shipping_option_id ) {
 			$consignment_id = $checkout->data->consignments[0]->id;
 			$body = (object)array( "shipping_option_id" => $shipping_option_id );
@@ -164,6 +176,7 @@ class Bolt_Save_Order
 		BoltLogger::write( print_r( $order, true ) );
 		$order_id = $order->data->id;
 
+		//make order complete
 		$pending_status_id = 1; //TODO Get status id from BC
 		$body = array( "status_id" => $pending_status_id );
 		BoltLogger::write( "Order {$order_id} UPDATE ORDER STATUS \"/v2/orders/{$order_id}\", " . json_encode( $body ) );
@@ -180,17 +193,18 @@ class Bolt_Save_Order
 		return $result;
 	}
 
-	//AJAX success callback
+	//
 
 	/**
-	 *
+	 * AJAX success callback
 	 */
-	function save_order()
+	function ajax_bolt_create_order()
 	{
 		BoltLogger::write( "save_order POST" . print_r( $_POST, true ) );
 		$bolt_data = json_decode( stripslashes( $_POST["transaction_details"] ) );
 		BoltLogger::write( "transaction_details" . print_r( $bolt_data, true ) );
 		$result = $this->bolt_create_order( $bolt_data->reference, $bolt_data->cart->order_reference, $bolt_data, true );
+
 		//Write order id to session. We'll read it on confirmation page
 		$_SESSION["bolt_order_id"] = $result["order_id"];
 		BoltLogger::write("\$_SESSION[\"bolt_order_id\"] = {$result["order_id"]};");
@@ -198,7 +212,6 @@ class Bolt_Save_Order
 		$this->clean_up_archaic_resources_async();
 		wp_send_json( array(
 			'result' => 'success',
-			// TODO: (after v3) create this order confirmation page
 			'redirect_url' => $this->confirmation_page->get_url(),
 		) );
 	}
@@ -218,29 +231,24 @@ class Bolt_Save_Order
 		$host = $url_parts['host'];
 		$protocol = '';
 		$port = @$url_parts['port'] ?: 80;
-		$context = null;
+
+		// verification disabled because ca_root file may not be configured correctly on host server
+		// it is not needed because we can trust a call to our own server
+		$context = stream_context_create( [
+			'ssl' => [
+				'verify_peer' => false,
+				'verify_peer_name' => false
+			]
+		] );
 
 		if ( $url_parts['scheme'] === 'https' ) {
 			$protocol = 'ssl://';
 			$port = @$url_parts['port'] ?: 443;
-
-			# verification disabled because ca_root file may not be configured correctly on host server
-			# it is not needed because we can trust a call to our own server
-			$context = stream_context_create( [
-				'ssl' => [
-					'verify_peer' => false,
-					'verify_peer_name' => false
-				]
-			] );
 		}
 		$errno = '';
 		$errstr = '';
 		BoltLogger::write( "$protocol$host:$port" );
-		if ( $context ) {
-			$fp = stream_socket_client( "$protocol$host:$port", $errno, $errstr, 30, STREAM_CLIENT_CONNECT, $context );
-		} else {
-			$fp = stream_socket_client( "$protocol$host:$port", $errno, $errstr, 30, STREAM_CLIENT_CONNECT );
-		}
+		$fp = stream_socket_client( "$protocol$host:$port", $errno, $errstr, 30, STREAM_CLIENT_CONNECT, $context );
 		BoltLogger::write( print_r( $fp, true ) );
 		stream_set_blocking( $fp, false );
 
@@ -255,11 +263,14 @@ class Bolt_Save_Order
 			$out .= "Connection: Close\r\n\r\n";
 
 			fwrite( $fp, $out );
-			# Close socket immediately as we don't need to wait for execution completion
+			// Close socket immediately as we don't need to wait for execution completion
 			fclose( $fp );
 		}
 	}
 
+	/**
+	 * Cleaning up expired order creation resources
+	 */
 	public function ajax_clean_up_archaic_resources()
 	{
 		global $wpdb;
@@ -294,7 +305,6 @@ class Bolt_Save_Order
 			$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'bolt_order_%' AND option_id IN (" . get_option( 'delete_bolt_order_resources' ) . ")" );
 			$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'bolt_cart_id_%' AND option_id IN (" . get_option( 'delete_bolt_cart_id_resources' ) . ")" );
 			$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'bolt_shipping_and_tax_%' AND option_id IN (" . get_option( 'delete_bolt_shipping_and_tax_resources' ) . ")" );
-
 
 			delete_option( 'delete_bolt_resources_time' );
 

@@ -12,7 +12,10 @@ require_once('class-bolt-bigcommerce-wordpress.php');
 
 class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 {
-	//Set up base actions    
+	private $form_fields;
+	/**
+	 * Set up base actions
+	 */
 	public function init()
 	{
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
@@ -20,16 +23,20 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 		parent::init();
 	}
 
-	//Add plugin to wordpress admin menu.
+	/**
+	 * Add plugin to wordpress admin menu
+	 */
 	public function admin_menu()
 	{
 		add_submenu_page( 'edit.php?post_type=bigcommerce_product', 'Bolt', 'Bolt', 'manage_options', 'bolt-bigcommerce', array( $this, 'settings' ) );
-		//add_menu_page( 'Bolt', 'Bolt', 'manage_options', 'bolt-bigcommerce', array( $this, 'settings' ) );
 		foreach ( $this->form_fields as $key => $form_field ) {
 			register_setting( 'bolt-bigcommerce', "bolt-bigcommerce_{$key}" );
 		}
 	}
 
+	/**
+	 * Initialize $this->form_fields - array of settings page fields
+	 */
 	public function init_form_fields()
 	{
 		/**
@@ -63,8 +70,9 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 		);
 	}
 
-
-	//Output form with settings.
+	/**
+	 * Output form with settings on admin page
+	 */
 	public function settings()
 	{
 		$admin_url = admin_url();

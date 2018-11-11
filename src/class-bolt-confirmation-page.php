@@ -11,7 +11,12 @@ class Bolt_Confirmation_Page
 		add_shortcode( 'bolt-confirmation', array( $this, 'shortcode' ) );
 	}
 
-	public function shortcode( $atts )
+	/**
+	 * Generate confirmation page
+	 *
+	 * @return string page HTML code
+	 */
+	public function shortcode()
 	{
 		if ( $_SESSION["bolt_order_id"] ) {
 			$result = "<h1>Thank you!</h1><p>Your order number is {$_SESSION["bolt_order_id"]}";
@@ -21,6 +26,12 @@ class Bolt_Confirmation_Page
 		return $result;
 	}
 
+	/**
+	 * Retutn post_id of page with chortcode 'bolt-confirmation'
+	 * Create page if it doesn't exit
+	 *
+	 * @return int post_id
+	 */
 	private function get_post_id()
 	{
 		$post_id = (int)get_option( "bolt-confirmation-post-id", 0 );
@@ -34,6 +45,12 @@ class Bolt_Confirmation_Page
 		return $post_id;
 	}
 
+	/**
+	 * Find all posts that contains chortcode 'bolt-confirmation'
+	 * Return id of the first one
+	 *
+	 * @return int post_id
+	 */
 	private function get_post_candidate()
 	{
 		global $wpdb;
@@ -47,6 +64,11 @@ class Bolt_Confirmation_Page
 		return (int)$post_ids[0];
 	}
 
+	/**
+	 * Create post and return it's id
+	 *
+	 * @return int post_id
+	 */
 	private function create_post()
 	{
 		$args = array(
@@ -63,6 +85,12 @@ class Bolt_Confirmation_Page
 	}
 
 
+	/**
+	 * Return Confirmation page full url
+	 * Create page if it doesn't exit
+	 *
+	 * @return string url
+	 */
 	public function get_url()
 	{
 		return get_permalink( $this->get_post_id() );

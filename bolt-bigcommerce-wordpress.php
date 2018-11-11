@@ -14,12 +14,11 @@
  * License:           GPL-3.0
  * License URI:       http://www.gnu.org/licenses/gpl-3.0.txt
  */
-const BC_API = "v2"; // use v3 server-to-server checkout APIs or not
 
 if ( !defined( 'ABSPATH' ) ) {
 	exit;
 }
-
+// Check if bigcommerce plugin installed and enables
 if ( in_array( 'bigcommerce-for-wordpress/bigcommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
 	// Check if there is admin user
 	if ( is_admin() ) {
@@ -32,11 +31,12 @@ if ( in_array( 'bigcommerce-for-wordpress/bigcommerce.php', apply_filters( 'acti
 
 	// include Bolt API
 	require(dirname( __FILE__ ) . '/lib/bolt-php/init.php');
-	//require(dirname(__FILE__) . '/src/class-bc-client.php');
+
 	// Include Bugsnag Class.
 	require_once(dirname( __FILE__ ) . '/src/BugsnagHelper.php');
 	require_once(dirname( __FILE__ ) . '/src/class-bolt-logger.php');
 
+	//class for confirmation page
 	require_once(dirname( __FILE__ ) . '/src/class-bolt-confirmation-page.php');
 
 	$bolt_bigcommerce->init();

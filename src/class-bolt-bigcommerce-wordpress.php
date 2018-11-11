@@ -7,7 +7,9 @@ if ( !defined( 'ABSPATH' ) ) {
 class Bolt_Bigcommerce_Wordpress
 {
 
-	//Set up base actions 
+	/**
+	 * Set up base actions
+	 */
 	public function init()
 	{
 		add_action( 'bigcommerce/cart/proceed_to_checkout', array( $this, 'bolt_cart_button' ) );
@@ -32,6 +34,9 @@ class Bolt_Bigcommerce_Wordpress
 	}
 
 
+	/**
+	 * Start PHP session
+	 */
 	public function start_session()
 	{
 		if ( !session_id() ) {
@@ -39,19 +44,30 @@ class Bolt_Bigcommerce_Wordpress
 		}
 	}
 
-	public function end_Session()
+	/**
+	 * Destroy PHP session
+	 */
+	public function end_session()
 	{
 		session_destroy();
 	}
 
+	/**
+	 * Enqueue scripts
+	 */
 	public function enqueue_scripts()
 	{
 		wp_enqueue_style( 'bolt-bigcommerce', plugins_url( 'css/bolt-bigcommerce.css', __FILE__ ) );
 	}
 
 
+	/**
+	 * Init Bolt API
+	 * Parameters are entered on the plugin settings page
+	 */
 	public function init_bolt_api()
 	{
+		//TODO: move isSandbocMode to admin settings page
 		$config = require(dirname( __FILE__ ) . '/../lib/config_bolt_php.php');
 		\BoltPay\Bolt::$apiKey = $this->get_option( "api_key" );
 		\BoltPay\Bolt::$signingSecret = $this->get_option( "signing_secret" );
@@ -64,6 +80,10 @@ class Bolt_Bigcommerce_Wordpress
 		\BoltPay\Bolt::$apiProductionUrl = 'https://api.bolt.com';
 	}
 
+	/**
+	 * Init bigcommerce API
+	 * Get access parameters from bigcommerce
+	 */
 	public function init_bigcommerce_api()
 	{
 		require_once(dirname( __FILE__ ) . '/bigcommerce-api/Client.php');
@@ -76,7 +96,6 @@ class Bolt_Bigcommerce_Wordpress
 			$store_hash = $matches[1];
 		}
 		BoltLogger::write( "init_bigcommerce_api client_id " . get_option( "BIGCOMMERCE_CLIENT_ID" ) . 'auth_token' . get_option( "BIGCOMMERCE_ACCESS_TOKEN" ) );
-		//TODO: get client_id auth_token from Bigcommerce. Now it works only for v2
 		BCClient::configure( [
 			'client_id' => get_option( "BIGCOMMERCE_CLIENT_ID" ),
 			'auth_token' => get_option( "BIGCOMMERCE_ACCESS_TOKEN" ),
@@ -85,7 +104,14 @@ class Bolt_Bigcommerce_Wordpress
 		] );
 	}
 
-	//get option
+
+	/**
+	 * Get option
+	 *
+	 * @param  string $key Key name
+	 *
+	 * @return string Key value
+	 */
 	protected function get_option( $key )
 	{
 		return esc_attr( get_option( "bolt-bigcommerce_{$key}" ) );

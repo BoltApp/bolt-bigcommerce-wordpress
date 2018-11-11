@@ -11,6 +11,9 @@ class Bolt_Shipping_And_Tax
 		add_action( 'rest_api_init', array( $this, 'register_endpoints' ) );
 	}
 
+	/**
+	 * Register wordpress endpoints
+	 */
 	public function register_endpoints()
 	{
 		register_rest_route( 'bolt', '/shippingtax', array(
@@ -19,6 +22,13 @@ class Bolt_Shipping_And_Tax
 		) );
 	}
 
+	/**
+	 * Convert address from bolt format to Bigcommerce
+	 *
+	 * @param  stdClass $bolt_address
+	 *
+	 * @return stdClass Address in Bigcommerce format
+	 */
 	private function convert_bolt_address_to_bc( $bolt_address )
 	{
 		$bc_address = new stdClass();
@@ -37,16 +47,23 @@ class Bolt_Shipping_And_Tax
 		return $bc_address;
 	}
 
-	private function address_is_change( $api_address, $new_address )
+	/**
+	 * Compare two addresses in Bigcommerce format
+	 *
+	 * @param $address1
+	 * @param $address2
+	 * @return bool true if address different, false if  the same
+	 */
+	private function address_is_change( $address1, $address2 )
 	{
 		$properties = array( 'first_name', 'last_name', 'company', 'address1', 'address2', 'city', 'state_or_province', 'postal_code', 'country', 'country_code', 'phone', 'email' );
 		foreach ( $properties as $property ) {
-			if ( !property_exists( $api_address, $property ) || $api_address->{$property} <> $new_address->{$property} ) {
+			if ( !property_exists( $address1, $property ) || $address1->{$property} <> $address2->{$property} ) {
 				ob_start();
-				var_dump( $api_address->{$property} );
-				var_dump( $new_address->{$property} );
+				var_dump( $address1->{$property} );
+				var_dump( $address2->{$property} );
 				$dump = ob_get_clean();
-				BoltLogger::write( "address_is_change {$property} {$dump}" . print_r( $api_address, true ) . " " . print_r( $new_address, true ) );
+				BoltLogger::write( "address_is_change {$property} {$dump}" . print_r( $address1, true ) . " " . print_r( $address2, true ) );
 				return true;
 			}
 		}
@@ -54,13 +71,14 @@ class Bolt_Shipping_And_Tax
 	}
 
 	//return shipping methods
+
+	/**
+	 * Return object with all accessable shipping methods & tax
+	 * GET $bolt_order from php://input
+	 */
 	function handler_shipping_tax()
 	{
-		//TODO (after v3) work with states maybe https://developer.bigcommerce.com/api/v3/#/reference/checkout/early-access-server-to-server-checkout/add-a-new-consignment-to-checkout
-		//TODO (wait) error with product types: always unknown https://app.asana.com/0/0/895580293902646/f
-		//TODO (after v3) deal with shipping discount https://store-5669f02hng.mybigcommerce.com/manage/marketing/discounts/create
-		//TODO (after v3) return "no shipping required" as option if all products are digital
-		//TODO (wait) work with taxes https://app.asana.com/0/0/895580293902645/f
+		//TODO deal with shipping discount https://store-5669f02hng.mybigcommerce.com/manage/marketing/discounts/create
 		BugsnagHelper::initBugsnag();
 		$hmacHeader = @$_SERVER['HTTP_X_BOLT_HMAC_SHA256'];
 		$signatureVerifier = new \BoltPay\SignatureVerifier(
@@ -72,6 +90,7 @@ class Bolt_Shipping_And_Tax
 		BoltLogger::write( "handler_shipping_tax " . print_r( $bolt_order, true ) );
 
 		if ( !$signatureVerifier->verifySignature( $bolt_order_json, $hmacHeader ) ) {
+			//TODO change to Bugsnag exception
 			throw new Exception( "Failed HMAC Authentication" );
 		}
 
@@ -82,7 +101,6 @@ class Bolt_Shipping_And_Tax
 			wp_send_json( json_decode( $cached_estimate ) );
 		}
 
-
 		//get Bigcommerce checkout
 		$bigcommerce_cart_id = get_option( "bolt_cart_id_" . $bolt_order->cart->order_reference );
 		BoltLogger::write( "{$bigcommerce_cart_id} = get_option( \"bolt_cart_id_\" . {$bolt_order->cart->order_reference} )" );
@@ -92,7 +110,6 @@ class Bolt_Shipping_And_Tax
 		BoltLogger::write( "get checkout " . print_r( $checkout, true ) );
 
 		//files names differ between BC v2 and v3 API. For example country_code <==> country_iso2
-
 		$address = $this->convert_bolt_address_to_bc( $bolt_order->cart->billing_address );
 		//TODO (after v3): If checkout bolt cart is different from BC cart use checkout bolt cart
 
@@ -151,7 +168,7 @@ class Bolt_Shipping_And_Tax
 					"tax_amount" => $tax_amount,
 				);
 			}
-		} else {
+		} else { //shipping isn't required
 			$bolt_shipping_options[] = array(
 				"service" => "no shipping required",
 				"reference" => "no_shipping",
@@ -161,8 +178,6 @@ class Bolt_Shipping_And_Tax
 		}
 		$cart_tax = (int)round( ($checkout->data->cart->cart_amount_inc_tax - $checkout->data->cart->cart_amount_ex_tax) * 100 );
 
-		//$shipping_and_tax_payload = array( "shipping_options" => $bolt_shipping_options );
-
 		$shipping_and_tax_payload = (object)array(
 			'tax_result' => (object)array(
 				'amount' => $cart_tax
@@ -170,7 +185,7 @@ class Bolt_Shipping_And_Tax
 			'shipping_options' => $bolt_shipping_options,
 		);
 
-		# Cache the shipping and tax response in case of a timed out request
+		// Cache the shipping and tax response
 		update_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5, json_encode( $shipping_and_tax_payload ), false );
 
 		BoltLogger::write( "response shipping options" . print_r( $shipping_and_tax_payload, true ) );
