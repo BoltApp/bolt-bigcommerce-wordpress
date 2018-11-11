@@ -28,7 +28,9 @@ class Bolt_Bigcommerce_Wordpress
 		add_action( 'init', array( $this, 'start_session' ) );
 		add_action( 'wp_logout', array( $this, 'end_session' ) );
 		add_action( 'wp_login', array( $this, 'end_session' ) );
+
 	}
+
 
 	public function start_session()
 	{
@@ -76,8 +78,8 @@ class Bolt_Bigcommerce_Wordpress
 		BoltLogger::write( "init_bigcommerce_api client_id " . get_option( "BIGCOMMERCE_CLIENT_ID" ) . 'auth_token' . get_option( "BIGCOMMERCE_ACCESS_TOKEN" ) );
 		//TODO: get client_id auth_token from Bigcommerce. Now it works only for v2
 		BCClient::configure( [
-			'client_id' => '2ei6wibvhq71hkbl3vzwkukg8hfp7nz', //get_option( "BIGCOMMERCE_CLIENT_ID" ),
-			'auth_token' => 'q08ula6ng01w2w29mgwnzb0iuyf6hdi', //get_option( "BIGCOMMERCE_ACCESS_TOKEN" ),
+			'client_id' => get_option( "BIGCOMMERCE_CLIENT_ID" ),
+			'auth_token' => get_option( "BIGCOMMERCE_ACCESS_TOKEN" ),
 			'client_secret' => get_option( "BIGCOMMERCE_CLIENT_SECRET" ),
 			'store_hash' => $store_hash,
 		] );
