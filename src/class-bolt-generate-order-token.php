@@ -9,7 +9,6 @@ class Bolt_Generate_Order_Token
 
 	public function __construct()
 	{
-		BugsnagHelper::initBugsnag();
 		add_action( 'bigcommerce/cart/proceed_to_checkout', array( $this, 'bolt_cart_button' ) );
 	}
 
@@ -19,7 +18,6 @@ class Bolt_Generate_Order_Token
 	 */
 	function bolt_cart_button( $bigcommerce_cart )
 	{
-		var_dump($bigcommerce_cart); exit;
 		//TODO: (later) If the cart changes without page reload handle then send to Bolt the new cart
 		//In bolt-woocommerce we use page reload at event 'updated_cart_totals' but I don't see JS event on bigcommerce-wordpress
 		BoltLogger::write( "bolt_cart_button " . print_r( $bigcommerce_cart, true ) );
@@ -75,6 +73,7 @@ class Bolt_Generate_Order_Token
 			print_r( $response );
 			print_r( $cartData );
 			print_r( $bigcommerce_cart );
+			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Bolt Order token doesn't create" ) );
 			exit;
 		}
 		//save link between order_reference and bolt_cart_id_

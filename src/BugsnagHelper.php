@@ -50,7 +50,7 @@ class BugsnagHelper
 			$bugsnag = new Bugsnag_Client( static::$apiKey );
 
 			$bugsnag->setErrorReportingLevel( E_ERROR );
-			$bugsnag->setAppVersion( WC_BOLT_GATEWAY_VERSION );
+			$bugsnag->setAppVersion( BOLT_BIGCOMMERCE_VERSION );
 			$bugsnag->setReleaseStage( static::$is_sandbox_mode ? 'development' : 'production' );
 			$bugsnag->setBatchSending( false );
 			$bugsnag->setBeforeNotifyFunction( array( 'BugsnagHelper', 'beforeNotifyFunction' ) );
@@ -84,8 +84,11 @@ class BugsnagHelper
 	public static function beforeNotifyFunction( $error )
 	{
 		$meta_data = array(
-			'Bolt-Plugin-Version' => WC_BOLT_GATEWAY_VERSION,
-			'Store-URL' => get_site_url()
+			'Bolt-Plugin-Version' => BOLT_BIGCOMMERCE_VERSION,
+			'Bigcommerce-Plugin-Version' => BIGCOMMERCE_VERSION,
+			'Wordpress-Version' => get_bloginfo('version'),
+			'Store-URL' => get_site_url(),
+			'Bigcommerce-Store-URL' => get_option( "bigcommerce_store_url" ),
 		);
 
 		if ( $trace_id = @$_SERVER['HTTP_X-BOLT-TRACE-ID'] ) {

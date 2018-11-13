@@ -81,6 +81,10 @@ class Bolt_Confirmation_Page
 			'ping_status' => 'closed',
 		);
 		$post_id = wp_insert_post( $args );
+		if (!$post_id) {
+			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't create page" ) );
+		}
+
 		return $post_id;
 	}
 

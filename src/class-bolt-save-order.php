@@ -52,8 +52,7 @@ class Bolt_Save_Order
 		BoltLogger::write( print_r( $bolt_data, true ) );
 
 		if ( !$signatureVerifier->verifySignature( $bolt_data_json, $hmacHeader ) ) {
-			//TODO change to Bugsnag exception
-			throw new Exception( "Failed HMAC Authentication" );
+			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Failed HMAC Authentication" ) );
 		}
 
 		//create new order
@@ -89,6 +88,9 @@ class Bolt_Save_Order
 			//$custom_status = "Recently Rejected";
 		} else if ( ("payment" == $bolt_type) && ("completed" == $bolt_status) ) {
 			$order = BCClient::getCollection( "/v2/orders/{$order_id}" );
+			if (!$order) {
+				BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't get order" ) );
+			}
 			BoltLogger::write( "order in order_set_status" . print_r( $order, true ) );
 			if ( $order->order_is_digital ) {
 				$new_status_id = 10; // Completed
@@ -103,7 +105,11 @@ class Bolt_Save_Order
 			$body = array( "status_id" => $new_status_id );
 			BoltLogger::write( "Order {$order_id} 
 			Change status From {$order->status_id} ({$order->status}) TO {$new_status_id} " . json_encode( $body ) );
-			BCClient::updateResource( "/v2/orders/{$order_id}", $body );
+			$result = BCClient::updateResource( "/v2/orders/{$order_id}", $body );
+			if (!$result) {
+				BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't update order" ) );
+			}
+
 		} else {
 			BoltLogger::write( "order status was actual" );
 		}
@@ -153,11 +159,12 @@ class Bolt_Save_Order
 		BoltLogger::write( "shipment" . print_r( $shipment, true ) );
 
 		$checkout = BCClient::getCollection( "/v3/checkouts/{$bigcommerce_cart_id}" );
+
 		BoltLogger::write( "checkout = BCClient::getCollection( \"/v3/checkouts/{$bigcommerce_cart_id}\" );" );
 		BoltLogger::write( "get checkout " . print_r( $checkout, true ) );
 
 		if ( !$checkout ) {
-			BoltLogger::write( "cart already destroyed" );
+			BugsnagHelper::getBugsnag()->notifyException( new Exception( "cart already destroyed" ) );
 			return $result;
 		}
 
@@ -168,6 +175,10 @@ class Bolt_Save_Order
 			BoltLogger::write( "UPDATE Consignment /v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options" );
 			BoltLogger::write( json_encode( $body ) );
 			$checkout = BCClient::updateResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $body );
+			if (!$checkout) {
+				BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't update consignment" ) );
+			}
+
 			BoltLogger::write( "New Consignment update answer " . print_r( $checkout, true ) );
 		}
 
@@ -175,6 +186,10 @@ class Bolt_Save_Order
 		$order = BCClient::createResource( "/v3/checkouts/{$bigcommerce_cart_id}/orders" );
 		BoltLogger::write( print_r( $order, true ) );
 		$order_id = $order->data->id;
+		if (!$order_id) {
+			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't create order" ) );
+		}
+
 
 		//make order complete
 		$pending_status_id = 1; //TODO Get status id from BC
@@ -277,7 +292,6 @@ class Bolt_Save_Order
 		BoltLogger::write( "start ajax_clean_up_archaic_resources" );
 		ignore_user_abort( true );
 		set_time_limit( 300 );
-		BugsnagHelper::initBugsnag();
 		//////////////////////////////////////////////
 		/// Clear historic bolt resources
 		//////////////////////////////////////////////

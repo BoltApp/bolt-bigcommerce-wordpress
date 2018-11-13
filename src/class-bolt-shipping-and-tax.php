@@ -79,7 +79,6 @@ class Bolt_Shipping_And_Tax
 	function handler_shipping_tax()
 	{
 		//TODO deal with shipping discount https://store-5669f02hng.mybigcommerce.com/manage/marketing/discounts/create
-		BugsnagHelper::initBugsnag();
 		$hmacHeader = @$_SERVER['HTTP_X_BOLT_HMAC_SHA256'];
 		$signatureVerifier = new \BoltPay\SignatureVerifier(
 			\BoltPay\Bolt::$signingSecret
@@ -90,13 +89,12 @@ class Bolt_Shipping_And_Tax
 		BoltLogger::write( "handler_shipping_tax " . print_r( $bolt_order, true ) );
 
 		if ( !$signatureVerifier->verifySignature( $bolt_order_json, $hmacHeader ) ) {
-			//TODO change to Bugsnag exception
-			throw new Exception( "Failed HMAC Authentication" );
+			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Failed HMAC Authentication" ) );
 		}
 
 		//try get data from cache
 		$bolt_cart_md5 = md5( $bolt_order_json );
-		if ( ($cached_estimate = get_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5 )) ) {
+		if ( 0 && ($cached_estimate = get_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5 )) ) {
 			BoltLogger::write( "return shipping_and_tax value from cache" );
 			wp_send_json( json_decode( $cached_estimate ) );
 		}
@@ -106,6 +104,9 @@ class Bolt_Shipping_And_Tax
 		BoltLogger::write( "{$bigcommerce_cart_id} = get_option( \"bolt_cart_id_\" . {$bolt_order->cart->order_reference} )" );
 
 		$checkout = BCClient::getCollection( "/v3/checkouts/{$bigcommerce_cart_id}" );
+		if (!$checkout) {
+			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't get checkout" ) );
+		}
 		BoltLogger::write( "checkout = BCClient::getCollection( \"/v3/checkouts/{$bigcommerce_cart_id}\" );" );
 		BoltLogger::write( "get checkout " . print_r( $checkout, true ) );
 
@@ -116,6 +117,9 @@ class Bolt_Shipping_And_Tax
 		if ( $this->address_is_change( $checkout->data->billing_address, $address ) ) {
 			//add or update billing address
 			$checkout = BCClient::createResource( "/v3/checkouts/{$bigcommerce_cart_id}/billing-address", $address );
+			if (!$checkout) {
+				BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't add address to checkout" ) );
+			}
 			BoltLogger::write( "add billing address /v3/checkouts/{$bigcommerce_cart_id}/billing-address " . json_encode( $address ) );
 			BoltLogger::write( "add billing address answer " . print_r( $checkout, true ) );
 		}
@@ -138,6 +142,9 @@ class Bolt_Shipping_And_Tax
 				BoltLogger::write( "Add a New Consignment /v3/checkouts/{$bigcommerce_cart_id}/consignments?include=consignments.available_shipping_options" );
 				BoltLogger::write( json_encode( $params ) );
 				$checkout = BCClient::createResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments?include=consignments.available_shipping_options", $params );
+				if (!$checkout) {
+					BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't create consignment" ) );
+				}
 				BoltLogger::write( "Add a New Consignment answer " . print_r( $checkout, true ) );
 				$consignment_id = $checkout->data->consignments[0]->id;
 				BoltLogger::write( "New consigment ID {$consignment_id}" );
@@ -146,6 +153,10 @@ class Bolt_Shipping_And_Tax
 				BoltLogger::write( "UPDATE Consignment /v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options" );
 				BoltLogger::write( json_encode( $consignment ) );
 				$checkout = BCClient::updateResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $consignment );
+				if (!$checkout) {
+					BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't update consignment" ) );
+				}
+
 				BoltLogger::write( "New Consignment update answer " . print_r( $checkout, true ) );
 			}
 			$shipping_options = $checkout->data->consignments[0]->available_shipping_options;
@@ -156,6 +167,9 @@ class Bolt_Shipping_And_Tax
 				BoltLogger::write( "UPDATE Consignment for calculate tax amount /v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id" );
 				BoltLogger::write( json_encode( $body ) );
 				$checkout_cost = BCClient::updateResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $body );
+				if (!$checkout_cost) {
+					BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't update consignment for calculate tax amount" ) );
+				}
 				BoltLogger::write( "UPDATE Consignment for calculate tax amount answer " . print_r( $checkout_cost, true ) );
 				$tax_amount = (int)round( ($checkout_cost->data->consignments[0]->shipping_cost_inc_tax - $checkout_cost->data->consignments[0]->shipping_cost_ex_tax) * 100 );
 				//add handling_cost as shipping

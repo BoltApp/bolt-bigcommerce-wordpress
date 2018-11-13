@@ -3,8 +3,6 @@
 
 class BoltLogger
 {
-
-	const BOLT_LOG_FILE = 'woocommerce-bolt-paymen/../log.txt';
 	const LOGECHO = false;
 	const IS_ENABLED = true;
 

@@ -3,7 +3,6 @@
  * Bolt Checkout for BigCommerce for Wordpress.
  *
  * @link              http://bolt.com
- * @since             1.0.0
  *
  * Plugin Name:       Bolt for BigCommerce Wordpress
  * Plugin URI:        http://bolt.com
@@ -15,11 +14,23 @@
  * License URI:       http://www.gnu.org/licenses/gpl-3.0.txt
  */
 
+
+const BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH = 'bigcommerce-for-wordpress/bigcommerce.php';
 if ( !defined( 'ABSPATH' ) ) {
 	exit;
 }
 // Check if bigcommerce plugin installed and enables
-if ( in_array( 'bigcommerce-for-wordpress/bigcommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
+if ( in_array( BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH, apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
+
+	if ( ! defined( 'BOLT_BIGCOMMERCE_VERSION' ) ) {
+		$plugin_bolt_data = get_file_data(__FILE__, array('Version' => 'Version'), false);
+		define( 'BOLT_BIGCOMMERCE_VERSION', $plugin_bolt_data['Version'] );
+	}
+	if ( ! defined( 'BIGCOMMERCE_VERSION' ) ) {
+		$plugin_bigcommerce_data = get_file_data(WP_PLUGIN_DIR.'/'. BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH, array('Version' => 'Version'), false);
+		define( 'BIGCOMMERCE_VERSION', $plugin_bigcommerce_data['Version'] );
+	}
+
 	// Check if there is admin user
 	if ( is_admin() ) {
 		require_once(dirname( __FILE__ ) . '/src/class-bolt-bigcommerce-wordpress-admin.php');
@@ -34,6 +45,9 @@ if ( in_array( 'bigcommerce-for-wordpress/bigcommerce.php', apply_filters( 'acti
 
 	// Include Bugsnag Class.
 	require_once(dirname( __FILE__ ) . '/src/BugsnagHelper.php');
+	BugsnagHelper::initBugsnag();
+	BugsnagHelper::getBugsnag()->notifyException( new Exception("test exception") );
+
 	require_once(dirname( __FILE__ ) . '/src/class-bolt-logger.php');
 
 	//class for confirmation page
