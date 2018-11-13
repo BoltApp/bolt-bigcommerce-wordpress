@@ -94,7 +94,7 @@ class Bolt_Shipping_And_Tax
 
 		//try get data from cache
 		$bolt_cart_md5 = md5( $bolt_order_json );
-		if ( 0 && ($cached_estimate = get_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5 )) ) {
+		if ( $cached_estimate = get_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5 ) ) {
 			BoltLogger::write( "return shipping_and_tax value from cache" );
 			wp_send_json( json_decode( $cached_estimate ) );
 		}

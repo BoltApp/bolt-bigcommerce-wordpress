@@ -46,7 +46,6 @@ if ( in_array( BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH, apply_filters( 'active_plugi
 	// Include Bugsnag Class.
 	require_once(dirname( __FILE__ ) . '/src/BugsnagHelper.php');
 	BugsnagHelper::initBugsnag();
-	BugsnagHelper::getBugsnag()->notifyException( new Exception("test exception") );
 
 	require_once(dirname( __FILE__ ) . '/src/class-bolt-logger.php');
 
