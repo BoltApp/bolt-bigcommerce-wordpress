@@ -8,11 +8,23 @@ if ( !defined( 'ABSPATH' ) ) {
 class Bolt_Save_Order
 {
 	private $confirmation_page;
+	private $order_id;
+	private $order;
 	public function __construct()
 	{
 		add_action( 'rest_api_init', array( $this, 'register_endpoints' ) );
 		$this->init_public_ajax();
 		$this->confirmation_page = New Bolt_Confirmation_Page();
+	}
+
+	private function getorder() {
+		if ( !isset( $this->order ) ) {
+			$this->order = BCClient::getCollection( "/v2/orders/{$order_id}" );
+			if (!$this->order) {
+				BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't get order" ) );
+			}
+		}
+		return $this->order;
 	}
 
 	/**
@@ -60,6 +72,7 @@ class Bolt_Save_Order
 
 		$response = (object) array(
 			'status' => $result["status"],
+			'display_id' => $result["order_id"],
 			'created_objects' => (object) array(
 				'merchant_order_ref' => $result["order_id"]
 			)
@@ -74,44 +87,63 @@ class Bolt_Save_Order
 	/**
 	 * Set order status
 	 *
-	 * @param int $order_id order id
-	 * @param string $bolt_type parameter from bolt: "rejected_reversible", "payment", "rejected_irreversible"
-	 * @param string $bolt_status parameter from bolt: if $bolt_type=='payment', $bolt_status needs to be "completed"
+	 * @param array $bolt_data parameters from bolt
 	 */
-	function order_set_status( $order_id, $bolt_type, $bolt_status = "" )
+	function order_set_status( $bolt_data )
 	{
-		BoltLogger::write( "order_set_status( $order_id, $bolt_type, $bolt_status )" );
-		//TODO (wait, asked) If shop owner changed default statuses
-		$new_status_id = 0;
-		if ( "rejected_reversible" == $bolt_type ) {
-			$new_status_id = 12; // Manual Verification Required
-			//$custom_status = "Recently Rejected";
-		} else if ( ("payment" == $bolt_type) && ("completed" == $bolt_status) ) {
-			$order = BCClient::getCollection( "/v2/orders/{$order_id}" );
-			if (!$order) {
-				BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't get order" ) );
-			}
-			BoltLogger::write( "order in order_set_status" . print_r( $order, true ) );
-			if ( $order->order_is_digital ) {
-				$new_status_id = 10; // Completed
-			} else {
-				$new_status_id = 11; // Awaiting Fulfillment
-			}
-		} else if ( "rejected_irreversible" == $bolt_type ) {
-			$new_status_id = 6; // Declined
-		}
+		BoltLogger::write( "order_set_status( {$this->order_id}, {$bolt_data->type} )" );
+		$query = array();
+		//TODO If shop owner changed default statuses https://store-5669f02hng.mybigcommerce.com/manage/orders/order-statuses
 
-		if ( $new_status_id && $order->id != $new_status_id ) {
-			$body = array( "status_id" => $new_status_id );
-			BoltLogger::write( "Order {$order_id} 
-			Change status From {$order->status_id} ({$order->status}) TO {$new_status_id} " . json_encode( $body ) );
-			$result = BCClient::updateResource( "/v2/orders/{$order_id}", $body );
+		//payment a sale occurred (auth+capture)
+		if ( 'payment' === $bolt_data->type ) {
+			if ( $this->getorder()->order_is_digital ) {
+				$query['status_id'] = 10; // Completed
+			} else {
+				$query['status_id'] = 11; // Awaiting Fulfillment
+			}
+			$query['payment_method'] = 'Bolt';
+			$query['payment_provider_id'] = $bolt_data->id;
+			$message = 'payment';
+		// credit a credit/refund was issued
+		} elseif ( 'credit' === $bolt_data->type ) {
+			$query['refunded_amount'] = $bolt_data->amount / 100;
+			$query['status_id'] = 4; //Refunded
+		// capture a capture occurred
+		} elseif ( 'capture' === $bolt_data->type ) {
+			if (!in_array($this->getorder()->status_id,array(10,11))){ // neither Completed nor Awaiting Fulfillment
+				$query['status_id'] = 7; //Awaiting Payment
+				$message = 'processing';
+			} else {
+				$message = 'completed';
+			}
+			$query['payment_provider_id'] = $bolt_data->id;
+		// void a void occurred
+		} elseif ( 'void' === $bolt_data->type ) {
+			$query['status_id'] = 5; //Cancelled
+			$message = 'cancelled';
+		// auth an authorization was issued
+		} elseif ( 'auth' === $bolt_data->type ) {
+			$query['status_id'] = 1; //Pending
+			$query['payment_provider_id'] = $bolt_data->id;
+		// rejected_reversible a transaction was rejected but decision can be overridden.
+		} elseif ( 'rejected_reversible' === $bolt_data->type ) {
+			$query['status_id'] = 12; // Manual Verification Required
+			$query['payment_provider_id'] = $bolt_data->id;
+			$message = 'rejected_reversible';
+		// rejected_irreversible a transaction was rejected and decision can not be overridden.
+		} elseif ( 'rejected_irreversible' === $bolt_data->type ) {
+			$query['status_id'] = 6; // Declined
+			$message = 'rejected_irreversible';
+		} else {
+			BugsnagHelper::getBugsnag()->notifyException( new Exception("Unknown transaction type {$bolt_data->type}".print_r($bolt_data,true)));
+		}
+		if ( $query  ) {
+			BoltLogger::write( "Order {$this->order_id} query " . print_r($query,true) );
+			$result = BCClient::updateResource( "/v2/orders/{$this->order_id}", $query );
 			if (!$result) {
 				BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't update order" ) );
 			}
-
-		} else {
-			BoltLogger::write( "order status was actual" );
 		}
 	}
 
@@ -127,20 +159,22 @@ class Bolt_Save_Order
 	 */
 	function bolt_create_order( $bolt_reference, $order_reference, $bolt_data, $is_json = false )
 	{
-		$bigcommerce_cart_id = get_option( "bolt_cart_id_" . $order_reference );
 		$result = array(
 			'status' => 'success',
 			'order_id' => 0,
 		);
 		// prevent re-creation order
 		BoltLogger::write( "bolt_create_order( {$bolt_reference}, {$order_reference}) bigcommerce_cart_id = {$bigcommerce_cart_id})" );
-		$bc_order_id = get_option( "bolt_order_{$bolt_reference}" );
+		$bc_order_id = get_option( "bolt_order_{$order_reference}" );
 		if ( $bc_order_id ) {
 			BoltLogger::write( "prevent re-creation order" );
-			$this->order_set_status( $bc_order_id, $bolt_data->type, $bolt_data->status );
+			$this->order_id =  $bc_order_id;
+			$this->order_set_status( $bolt_data );
 			$result["order_id"] = $bc_order_id;
 			return $result;
 		}
+
+		$bigcommerce_cart_id = get_option( "bolt_cart_id_{$order_reference}" );
 
 		if ( $is_json ) {
 			$shipment = $bolt_data->shipping_option->value;
@@ -198,8 +232,8 @@ class Bolt_Save_Order
 		BCClient::updateResource( "/v2/orders/{$order_id}", $body );
 
 		//save Bigcommerce order id
-		add_option( "bolt_order_{$bolt_reference}", $order_id );
-		BoltLogger::write( "add_option( \"bolt_order_{$bolt_reference}\", $order_id )" );
+		add_option( "bolt_order_{$order_reference}", $order_id );
+		BoltLogger::write( "add_option( \"bolt_order_{$order_reference}\", $order_id )" );
 
 		//delete cart (it doesn't delete itself altough according to the documentation it should
 		BCClient::deleteResource( "/v3/carts/{$bigcommerce_cart_id}" );
