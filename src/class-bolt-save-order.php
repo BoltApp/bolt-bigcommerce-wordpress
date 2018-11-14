@@ -72,6 +72,7 @@ class Bolt_Save_Order
 
 		$response = (object) array(
 			'status' => $result["status"],
+			'message' => $result["message"],
 			'display_id' => $result["order_id"],
 			'created_objects' => (object) array(
 				'merchant_order_ref' => $result["order_id"]
@@ -91,6 +92,7 @@ class Bolt_Save_Order
 	 */
 	function order_set_status( $bolt_data )
 	{
+		$message = '';
 		BoltLogger::write( "order_set_status( {$this->order_id}, {$bolt_data->type} )" );
 		$query = array();
 		//TODO If shop owner changed default statuses https://store-5669f02hng.mybigcommerce.com/manage/orders/order-statuses
@@ -109,6 +111,7 @@ class Bolt_Save_Order
 		} elseif ( 'credit' === $bolt_data->type ) {
 			$query['refunded_amount'] = $bolt_data->amount / 100;
 			$query['status_id'] = 4; //Refunded
+			$message = 'refunded';
 		// capture a capture occurred
 		} elseif ( 'capture' === $bolt_data->type ) {
 			if (!in_array($this->getorder()->status_id,array(10,11))){ // neither Completed nor Awaiting Fulfillment
@@ -145,6 +148,7 @@ class Bolt_Save_Order
 				BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't update order" ) );
 			}
 		}
+		return $message;
 	}
 
 	/**
@@ -169,7 +173,7 @@ class Bolt_Save_Order
 		if ( $bc_order_id ) {
 			BoltLogger::write( "prevent re-creation order" );
 			$this->order_id =  $bc_order_id;
-			$this->order_set_status( $bolt_data );
+			$result["message"] = $this->order_set_status( $bolt_data );
 			$result["order_id"] = $bc_order_id;
 			return $result;
 		}
