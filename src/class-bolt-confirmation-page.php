@@ -19,7 +19,15 @@ class Bolt_Confirmation_Page
 	public function shortcode()
 	{
 		if ( $_SESSION["bolt_order_id"] ) {
-			$result = "<h1>Thank you!</h1><p>Your order number is {$_SESSION["bolt_order_id"]}";
+			$order_id = $_SESSION["bolt_order_id"];
+			$customer = new BigCommerce\Accounts\Customer( get_current_user_id() );
+			$order    = $customer->get_order_details( $order_id );
+			if ( empty( $order ) ) {
+				$controller = BigCommerce\Templates\Order_Not_Found::factory([]);
+			} else {
+				$controller = BigCommerce\Templates\Order_Details::factory( [ BigCommerce\Templates\Order_Details::ORDER => $order ] );
+			}
+			$result = $controller->render();
 		} else {
 			$result = "Error";
 		}
@@ -74,8 +82,8 @@ class Bolt_Confirmation_Page
 		$args = array(
 			'post_type' => 'page',
 			'post_status' => 'publish',
-			'post_title' => 'Thank you for your order',
-			'post_name' => 'order confitmation',
+			'post_title' => 'Thanks for your order',
+			'post_name' => 'order confirmation',
 			'post_content' => "[bolt-confirmation]",
 			'comment_status' => 'closed',
 			'ping_status' => 'closed',
