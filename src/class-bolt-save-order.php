@@ -67,6 +67,14 @@ class Bolt_Save_Order
 			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Failed HMAC Authentication" ) );
 		}
 
+
+		// Implement discount hook
+		if ('discounts.code.apply' === $bolt_data->type) {
+			BoltLogger::write("into discount if");
+			$bolt_discounts  = new Bolt_Discounts_Helper($bolt_data);
+			return $bolt_discounts->apply_coupon_from_discount_hook();
+		}
+
 		//create new order
 		$result = $this->bolt_create_order( $bolt_data->reference, $bolt_data->order, $bolt_data );
 
@@ -196,38 +204,13 @@ class Bolt_Save_Order
 		$shipping_option_id = $shipment->reference;
 		BoltLogger::write( "shipment" . print_r( $shipment, true ) );
 
-		$checkout = BCClient::getCollection( "/v3/checkouts/{$bigcommerce_cart_id}" );
-
-		BoltLogger::write( "checkout = BCClient::getCollection( \"/v3/checkouts/{$bigcommerce_cart_id}\" );" );
-		BoltLogger::write( "get checkout " . print_r( $checkout, true ) );
-
-		if ( !$checkout ) {
-			BugsnagHelper::getBugsnag()->notifyException( new Exception( "cart already destroyed" ) );
-			return $result;
-		}
+		$checkout = new Bolt_Checkout($bigcommerce_cart_id);
 
 		//set selected shipping method
 		if ( "no_shipping" <> $shipping_option_id ) {
-			$consignment_id = $checkout->data->consignments[0]->id;
-			$body = (object)array( "shipping_option_id" => $shipping_option_id );
-			BoltLogger::write( "UPDATE Consignment /v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options" );
-			BoltLogger::write( json_encode( $body ) );
-			$checkout = BCClient::updateResource( "/v3/checkouts/{$bigcommerce_cart_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $body );
-			if (!$checkout) {
-				BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't update consignment" ) );
-			}
-
-			BoltLogger::write( "New Consignment update answer " . print_r( $checkout, true ) );
+			$checkout->set_shipping_option($shipping_option_id);
 		}
-
-		BoltLogger::write( "CREATE ORDER /v3/checkouts/{$bigcommerce_cart_id}/orders" );
-		$order = BCClient::createResource( "/v3/checkouts/{$bigcommerce_cart_id}/orders" );
-		BoltLogger::write( print_r( $order, true ) );
-		$order_id = $order->data->id;
-		if (!$order_id) {
-			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't create order" ) );
-		}
-
+		$order_id = $checkout->create_order();
 
 		//make order complete
 		$pending_status_id = 1; //TODO Get status id from BC
@@ -240,7 +223,7 @@ class Bolt_Save_Order
 		BoltLogger::write( "add_option( \"bolt_order_{$order_reference}\", $order_id )" );
 
 		//delete cart (it doesn't delete itself altough according to the documentation it should
-		BCClient::deleteResource( "/v3/carts/{$bigcommerce_cart_id}" );
+		$checkout->delete();
 
 		$result["order_id"] = $order_id;
 		return $result;

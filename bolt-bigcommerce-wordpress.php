@@ -52,6 +52,10 @@ if ( in_array( BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH, apply_filters( 'active_plugi
 	//class for confirmation page
 	require_once(dirname( __FILE__ ) . '/src/class-bolt-confirmation-page.php');
 
+	require_once(dirname( __FILE__ ) . '/src/class-bolt-discounts-helper.php');
+
+	require_once(dirname( __FILE__ ) . '/src/class-bolt-checkout.php');
+
 	$bolt_bigcommerce->init();
 }
  

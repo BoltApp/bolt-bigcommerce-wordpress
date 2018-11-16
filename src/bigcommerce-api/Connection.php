@@ -284,7 +284,7 @@ class Connection
 
 		$status = $this->getStatus();
 		if ( $status >= 400 && $status <= 499 ) {
-			BoltLogger::write("status $status");
+			BoltLogger::write("status $status body ".$this->getBody());
 			if ( $this->failOnError ) {
 				throw new ClientError( $body, $status );
 			} else {
@@ -389,6 +389,8 @@ class Connection
 	public function post( $url, $body )
 	{
 		$this->addHeader( 'Content-Type', $this->getContentType() );
+
+		BoltLogger::write("url={$url}");
 
 		if ( !is_string( $body ) ) {
 			$body = json_encode( $body );
