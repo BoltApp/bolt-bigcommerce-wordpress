@@ -6,16 +6,83 @@ if ( !defined( 'ABSPATH' ) ) {
 
 class Bolt_Generate_Order_Token
 {
+	private $error;
 
 	public function __construct()
 	{
-		add_filter( 'bigcommerce/template=components/cart/cart-footer.php/data', array( $this, 'change_bigcommerce_cart_footer_template'), 10, 3 );
+		add_filter( 'bigcommerce/template=components/cart/cart-footer.php/data', array( $this, 'change_bigcommerce_cart_footer_template'), 10, 1 );
 	}
 
-	public function change_bigcommerce_cart_footer_template($data,$template,$options)
+	/**
+	 * filter for bolt button adding
+	 *
+	 * @param array $data
+	 * @return array
+	 */
+	public function change_bigcommerce_cart_footer_template($data)
 	{
-		$data['actions'] .= $this->bolt_cart_button($data['cart']);
+		if ($this->check_products_availability($data['cart'])) {
+			$data['actions'] .= $this->bolt_cart_button($data['cart']);
+		} else {
+			$data['actions'] .= '<div class="bc-cart-actions"><p>'.$this->error.'</div>';
+		}
 		return $data;
+	}
+
+	/**
+	 * Format error text if the certain product isn't available
+	 *
+	 * @param $name product name
+	 * @param $quantity product quanity on stock
+	 */
+	private function set_availability_error($name, $quantity) {
+		if (0 == $quantity) {
+			$this->error = "Product '{$name}' is currently unavailable";
+		} else if (1 == $quantity) {
+			$this->error = "We have only 1 item of '{$name}' on our stock";
+		} else {
+			$this->error = "We have only {$quantity} items of '{$name}' on our stock";
+		}
+
+	}
+
+	/**
+	 * Check if products in cart are available now
+	 *
+	 * @param array $cart bigcommerce cart
+	 *
+	 * @return bool
+	 */
+	private function check_products_availability($cart) {
+		$availability = true;
+		foreach ($cart["items"] as $item) {
+			$product = BCClient::getCollection("/v2/products/{$item["product_id"]}?include=@summary");
+			if ("available" != $product->availability) {
+				$this->set_availability_error($product->name,0);
+				$availability = false;
+				break;
+			} else 	if  (("simple" == $product->inventory_tracking) && ($product->inventory_level<$item["quantity"])) {
+				$this->set_availability_error($product->name,$product->inventory_level);
+				$availability = false;
+				break;
+			} else if ("sku" == $product->inventory_tracking) {
+				//need to do additional API call for product withy variant
+				$variant_product = BCClient::getCollection("/v3/catalog/products/{$item["product_id"]}/variants/{$item["variant_id"]}");
+				if ($variant_product->data->inventory_level<$item["quantity"]) {
+					$options = "";
+					foreach($variant_product->data->option_values as $option_id=>$option) {
+						if (0 <> $option_id) $options.=", ";
+						$options .= $option->option_display_name . ":" . $option->label;
+					}
+					$product_name = $product->name . ' (' . $options . ")";
+					$this->set_availability_error($product_name,$variant_product->data->inventory_level);
+					$availability = false;
+					break;
+				}
+			}
+
+		}
+		return $availability;
 	}
 
 	/**
