@@ -47,7 +47,7 @@ class Connection
 	/**
 	 * @var boolean
 	 */
-	private $failOnError = false;
+	private $failOnError = true;
 
 	/**
 	 * Manually follow location redirects. Used if CURLOPT_FOLLOWLOCATION
@@ -284,9 +284,9 @@ class Connection
 
 		$status = $this->getStatus();
 		if ( $status >= 400 && $status <= 499 ) {
-			BoltLogger::write("status $status body ".$this->getBody());
+			BoltLogger::write("status $status body title {$body->title} body ".$this->getBody());
 			if ( $this->failOnError ) {
-				throw new ClientError( $body, $status );
+				throw new Exception( $body->title, $status );
 			} else {
 				$this->lastError = $body;
 				return false;
@@ -294,7 +294,7 @@ class Connection
 		} elseif ( $status >= 500 && $status <= 599 ) {
 			BoltLogger::write("status $status");
 			if ( $this->failOnError ) {
-				throw new ServerError( $body, $status );
+				throw new Exception( $body, $status );
 			} else {
 				$this->lastError = $body;
 				return false;

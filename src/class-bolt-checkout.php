@@ -220,4 +220,22 @@ class Bolt_Checkout
 		BCClient::deleteResource( "/v3/carts/{$this->checkout_id}" );
 	}
 
+	public function add_coupon($coupon_code) {
+		$params = (object) array( "coupon_code" => $coupon_code);
+		BoltLogger::write("/v3/checkouts/{$this->checkout_id}/coupons ".json_encode($params));
+		$data = BCClient::createResource( "/v3/checkouts/{$this->checkout_id}/coupons", $params );
+		BoltLogger::write("COUPON CHECKOUT AFTER" . print_r($data,true));
+		$this->_data = $data;
+	}
+
+	public function add_gift($gift_code) {
+		$params = (object) array( "giftCertificateCode" => $gift_code);
+		BoltLogger::write("/v3/checkouts/{$this->checkout_id}/gift-certificates ".json_encode($params));
+		$data = BCClient::createResource( "/v3/checkouts/{$this->checkout_id}/gift-certificates", $params );
+		BoltLogger::write("GIFT CHECKOUT AFTER" . print_r($data,true));
+		$this->_data = $data;
+	}
+
+
+
 }

@@ -24,22 +24,30 @@ class Bolt_Generate_Order_Token
 
 		$currency_code = get_option( BigCommerce\Settings\Sections\Currency::CURRENCY_CODE, '' );
 
+		$tax_amount = isset($bigcommerce_cart["tax_amount"]["raw"]) ? $bigcommerce_cart["tax_amount"]["raw"] * 100 : 0;
+		$discount_amount = isset($bigcommerce_cart["discount_amount"]["raw"]) ? $bigcommerce_cart["discount_amount"]["raw"] * 100 : 0;
+		if ($tax_amount<0) {
+			//coupon using result
+			$discount_amount -= $tax_amount;
+			$tax_amount = 0;
+		}
+
 		$order_reference = uniqid( 'BLT', false );
 		$cart = array(
 			"order_reference" => $order_reference,
 			"display_id" => $order_reference,
 			"currency" => $currency_code,
 			"total_amount" => (int)round($bigcommerce_cart["cart_amount"]["raw"] * 100),
-			"tax_amount" => (int)round($bigcommerce_cart["tax_amount"]["raw"] * 100),
+			"tax_amount" => (int)round($tax_amount),
 			"discounts" => array(),
 		);
 
 		//Discounts for product: show only discounted price as well as in bolt-woocommerce
 		//Discounts for cart: show only total discount (Bigcommerce restrictions)
 		//Coupon codes: customer can use it only after press "Bigcommerce process to checkout"
-		if ( $bigcommerce_cart["discount_amount"]["raw"] ) {
+		if ( $discount_amount > 0 ) {
 			$cart["discounts"][] = array(
-				"amount" => (int)round($bigcommerce_cart["discount_amount"]["raw"] * 100),
+				"amount" => (int)round($discount_amount),
 				"description" => "Discount",
 			);
 		}

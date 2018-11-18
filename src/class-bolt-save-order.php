@@ -19,7 +19,7 @@ class Bolt_Save_Order
 
 	private function getorder() {
 		if ( !isset( $this->order ) ) {
-			$this->order = BCClient::getCollection( "/v2/orders/{$order_id}" );
+			$this->order = BCClient::getCollection( "/v2/orders/{$this->order_id}" );
 			if (!$this->order) {
 				BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't get order" ) );
 			}
@@ -71,6 +71,7 @@ class Bolt_Save_Order
 		// Implement discount hook
 		if ('discounts.code.apply' === $bolt_data->type) {
 			BoltLogger::write("into discount if");
+			BoltLogger::write($bolt_data_json);
 			$bolt_discounts  = new Bolt_Discounts_Helper($bolt_data);
 			return $bolt_discounts->apply_coupon_from_discount_hook();
 		}

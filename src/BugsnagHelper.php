@@ -76,7 +76,7 @@ class BugsnagHelper
 
 	/**
 	 * Method for coercing the Bugsnag_Error object, just prior to it being sent to the Bugsnag
-	 * server.  Here, we use it to set the WooCommerce version, plugin version, and Trace-Id if
+	 * server.  Here, we use it to set the Bigcommnerce version, plugin version, and Trace-Id if
 	 * available
 	 *
 	 * @param Bugsnag_Error $error

@@ -119,3 +119,20 @@ class Bolt_Bigcommerce_Wordpress
 
 
 }
+
+/**
+ * Adds HTTP headers with version information.
+ *
+ * @param $response WP_REST_Response response.
+ *
+ * @return WP_REST_Response response with headers.
+ */
+function set_version_headers( $response ) {
+	$response->set_headers(
+		array(
+			'X-User-Agent' => 'Bolt/Bigcommerce-'.BOLT_BIGCOMMERCE_VERSION.'/'.WC_BOLT_GATEWAY_VERSION,
+			'X-Bolt-Plugin-Version' => BOLT_BIGCOMMERCE_VERSION
+		)
+	);
+	return $response;
+}
