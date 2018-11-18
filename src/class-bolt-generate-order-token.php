@@ -9,7 +9,13 @@ class Bolt_Generate_Order_Token
 
 	public function __construct()
 	{
-		add_action( 'bigcommerce/cart/proceed_to_checkout', array( $this, 'bolt_cart_button' ) );
+		add_filter( 'bigcommerce/template=components/cart/cart-footer.php/data', array( $this, 'change_bigcommerce_cart_footer_template'), 10, 3 );
+	}
+
+	public function change_bigcommerce_cart_footer_template($data,$template,$options)
+	{
+		$data['actions'] .= $this->bolt_cart_button($data['cart']);
+		return $data;
 	}
 
 	/**
@@ -91,10 +97,11 @@ class Bolt_Generate_Order_Token
 
 		$hints = $this->calculate_hints();
 
-		echo '<div class="bolt-checkout-button with-cards"></div>';
-		echo \BoltPay\Helper::renderBoltTrackScriptTag();
-		echo \BoltPay\Helper::renderBoltConnectScriptTag();
-		$this->render( "main.js.php", array( "orderToken" => $orderToken, "hints" => $hints ) );
+		$result = '<div class="bc-cart-actions"><div class="bolt-checkout-button with-cards"></div></div>';
+		$result .= \BoltPay\Helper::renderBoltTrackScriptTag();
+		$result .= \BoltPay\Helper::renderBoltConnectScriptTag();
+		$result .= $this->render( "main.js.php", array( "orderToken" => $orderToken, "hints" => $hints ),false );
+		return $result;
 	}
 
 	/**
