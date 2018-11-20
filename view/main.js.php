@@ -1,5 +1,3 @@
-<script>
-    // Once the payment has been done on the bolt this method will be fired.
     save_checkout = function ( transaction, callback, type ) {
 
         var params = [
@@ -76,4 +74,3 @@
         // Re-navigate to the same page with a fresh session to avoid repeating the last action 
         window.location = window.location.href;
     });
-</script>

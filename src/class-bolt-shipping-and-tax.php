@@ -11,6 +11,16 @@ class Bolt_Shipping_And_Tax
 		add_action( 'rest_api_init', array( $this, 'register_endpoints' ) );
 	}
 
+	private $cart;
+	private $order_reference;
+	private $bigcommerce_cart_id;
+	private function cart() {
+		if (!isset($this->cart)) {
+			$this->cart = new Bolt_Cart();
+		}
+		return $this->cart;
+	}
+
 	/**
 	 * Register wordpress endpoints
 	 */
@@ -63,6 +73,7 @@ class Bolt_Shipping_And_Tax
 		);
 		$bolt_order_json = file_get_contents( 'php://input' );
 		$bolt_order = json_decode( $bolt_order_json );
+		$this->order_reference = $bolt_order->cart->order_reference;
 
 		BoltLogger::write( "handler_shipping_tax " . print_r( $bolt_order, true ) );
 
@@ -78,16 +89,36 @@ class Bolt_Shipping_And_Tax
 		}
 
 		//get Bigcommerce checkout
-		$bigcommerce_cart_id = get_option( "bolt_cart_id_" . $bolt_order->cart->order_reference );
-		BoltLogger::write( "{$bigcommerce_cart_id} = get_option( \"bolt_cart_id_\" . {$bolt_order->cart->order_reference} )" );
 
-		$checkout = new Bolt_Checkout($bigcommerce_cart_id);
+		$bolt_cart_id_option = get_option( "bolt_cart_id_" . $bolt_order->cart->order_reference );
+		$this->bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
+
+		if (isset($bolt_cart_id_option['product'])) {
+			//need to add product to cart cos user in product page
+			$this->add_product_to_cart($bolt_cart_id_option);
+		}
+
+		BoltLogger::write( print_r($bolt_cart_id_option,true). " = get_option( \"bolt_cart_id_\" . {$bolt_order->cart->order_reference} )" );
+
+		$checkout = new Bolt_Checkout($this->bigcommerce_cart_id);
 
 		//files names differ between BC v2 and v3 API. For example country_code <==> country_iso2
 		$address = $this->convert_bolt_address_to_bc( $bolt_order->cart->billing_address );
 		//TODO (after v3): If checkout bolt cart is different from BC cart use checkout bolt cart
 
 		$checkout->update_address($address);
+
+		//TODO test with delivery method (now tested only for digital products, not work if update_customer_id before update_address
+		//TODO test mixed cart (added before+button on cart page)
+		//TODO test for unregistered users
+		//TODO change customer_id only if necessary
+
+		if (($bolt_cart_id_option["product"]['customer_id'])) {
+			BCCLIENT::updateResource("/v3/carts/{$this->bigcommerce_cart_id}",
+				array(
+					'customer_id'=> $bolt_cart_id_option["product"]['customer_id']
+				));
+		}
 
 
 		//Add or update consignment to Checkout
@@ -130,6 +161,27 @@ class Bolt_Shipping_And_Tax
 
 		BoltLogger::write( "response shipping options" . print_r( $shipping_and_tax_payload, true ) );
 		wp_send_json( $shipping_and_tax_payload );
+	}
+
+	private function add_product_to_cart($bolt_cart_id_option) {
+		$product = $bolt_cart_id_option['product'];
+		$_COOKIE['bigcommerce_cart_id'] = $bolt_cart_id_option['cart_id'];
+		$response = $this->cart()->add_line_item( $product['product_id'], $product['options'], $product['quantity'], $product['modifiers'] );
+		if ($response->getId() <> $bolt_cart_id_option['cart_id']) {
+			//new cart was created
+			BoltLogger::write("customer_id {$product['customer_id']} set for cart ".$response->getId()." Old cart {$bolt_cart_id_option['cart_id']}");
+			$bolt_cart_id_option['cart_id'] = $response->getId();
+			/*
+			if (($product['customer_id'])) {
+				BCCLIENT::updateResource("/v3/carts/{$bolt_cart_id_option['cart_id']}",
+					array(
+						'customer_id'=> $product['customer_id']
+					));
+			}
+			*/
+			update_option( "bolt_cart_id_" . $this->order_reference, $bolt_cart_id_option);
+			$this->bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
+		}
 	}
 
 }

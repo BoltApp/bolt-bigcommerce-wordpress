@@ -58,8 +58,14 @@ class Bolt_Bigcommerce_Wordpress
 	public function enqueue_scripts()
 	{
 		wp_enqueue_style( 'bolt-bigcommerce', plugins_url( 'css/bolt-bigcommerce.css', __FILE__ ) );
+		wp_enqueue_script( 'jquery.blockUI', plugins_url( 'js/jquery-blockui/jquery.blockUI.js', __FILE__ ),array( 'jquery' ) );
+		wp_enqueue_script( 'bolt-bigcommerce', plugins_url( 'js/bolt-bigcommerce.js', __FILE__ ) );
+		wp_localize_script( 'bolt-bigcommerce', 'boltajax',
+			array(
+				'url' => admin_url('admin-ajax.php'),
+			)
+		);
 	}
-
 
 	/**
 	 * Init Bolt API

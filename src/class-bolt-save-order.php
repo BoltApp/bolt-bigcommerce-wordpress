@@ -187,11 +187,23 @@ class Bolt_Save_Order
 			return $result;
 		}
 
-		$bigcommerce_cart_id = get_option( "bolt_cart_id_{$order_reference}" );
+		$bolt_cart_id_option = get_option( "bolt_cart_id_{$order_reference}" );
+
+		$bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
 
 		if ( $is_json ) {
 			$shipment = $bolt_data->shipping_option->value;
 		} else {
+			if ($_COOKIE['bigcommerce_cart_id']<>$bigcommerce_cart_id) {
+				//user is on product page
+				//bigcommerce cart created when Bolt asked about shipping and task
+				//and bigcommerce_cart_id isn't yet bound to user session
+				$_COOKIE['bigcommerce_cart_id'] = $bigcommerce_cart_id;
+				$cookie_life = apply_filters( 'bigcommerce/cart/cookie_lifetime', 30 * DAY_IN_SECONDS );
+				$secure      = ( 'https' === parse_url( home_url(), PHP_URL_SCHEME ) );
+				$cookie_result = setcookie( 'bigcommerce_cart_id', $bigcommerce_cart_id, time() + $cookie_life, COOKIEPATH, COOKIE_DOMAIN, $secure );
+				BoltLogger::write("{$cookie_result} = setcookie( bigcommerce_cart_id, {$cart_id}, time() + ".$cookie_life.", ".COOKIEPATH.", ".COOKIE_DOMAIN.", $secure );");
+			}
 			//get data from Bolt transaction
 			$bolt_client = new \BoltPay\ApiClient( [
 				'api_key' => \BoltPay\Bolt::$apiKey,

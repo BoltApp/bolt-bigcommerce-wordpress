@@ -279,6 +279,7 @@ class Connection
 			BoltLogger::write("error ".curl_error( $this->curl )." ".curl_errno( $this->curl ));
 			throw new NetworkError( curl_error( $this->curl ), curl_errno( $this->curl ) );
 		}
+		BoltLogger::write("this->getBody:".$this->getBody());
 
 		$body = ($this->rawResponse) ? $this->getBody() : json_decode( $this->getBody() );
 
@@ -474,6 +475,7 @@ class Connection
 	 */
 	public function delete( $url )
 	{
+		BoltLogger::write("delete url={$url}");
 		$this->initializeRequest();
 
 		curl_setopt( $this->curl, CURLOPT_PUT, false );
