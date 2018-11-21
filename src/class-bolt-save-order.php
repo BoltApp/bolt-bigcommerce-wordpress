@@ -10,6 +10,7 @@ class Bolt_Save_Order
 	private $confirmation_page;
 	private $order_id;
 	private $order;
+	private $transaction_reference;
 	public function __construct()
 	{
 		add_action( 'rest_api_init', array( $this, 'register_endpoints' ) );
@@ -116,6 +117,8 @@ class Bolt_Save_Order
 			$query['payment_method'] = 'Bolt';
 			$query['payment_provider_id'] = $bolt_data->id;
 			$message = $bolt_data->type;
+			$this->transaction_reference = $bolt_data->reference;
+			$this->delete_rejected_reversible_note();
 		// credit a credit/refund was issued
 		} elseif ( 'credit' === $bolt_data->type ) {
 			$query['refunded_amount'] = $bolt_data->amount / 100;
@@ -139,10 +142,15 @@ class Bolt_Save_Order
 			$query['status_id'] = 12; // Manual Verification Required
 			$query['payment_provider_id'] = $bolt_data->id;
 			$message = 'rejected_reversible';
-		// rejected_irreversible a transaction was rejected and decision can not be overridden.
+			$this->transaction_reference = $bolt_data->reference;
+			$this->add_rejected_reversible_note();
+
+			// rejected_irreversible a transaction was rejected and decision can not be overridden.
 		} elseif ( 'rejected_irreversible' === $bolt_data->type ) {
 			$query['status_id'] = 6; // Declined
 			$message = 'rejected_irreversible';
+			$this->transaction_reference = $bolt_data->reference;
+			$this->delete_rejected_reversible_note();
 		} else {
 			BugsnagHelper::getBugsnag()->notifyException( new Exception("Unknown transaction type {$bolt_data->type}".print_r($bolt_data,true)));
 		}
@@ -238,8 +246,6 @@ class Bolt_Save_Order
 		return $result;
 	}
 
-	//
-
 	/**
 	 * AJAX success callback
 	 */
@@ -260,6 +266,46 @@ class Bolt_Save_Order
 			'redirect_url' => $this->confirmation_page->get_url(),
 		) );
 	}
+
+	private function set_staff_note($note) {
+		$body = array( "staff_notes" => $note );
+		$this->order = BCClient::updateResource( "/v2/orders/{$this->order_id}" , $body);
+	}
+
+	private function rejection_note_text() {
+		if (\BoltPay\Bolt::$isSandboxMode) {
+			$domen = 'merchant-sandbox.bolt.com';
+		} else {
+			$domen = 'merchant.bolt.com';
+		}
+		return "Order is rejected by Bolt. You can either force approve or confirm rejection from https://{$domen}/transaction/{$this->transaction_reference}";
+	}
+
+	private function get_staff_note() {
+		return $this->getorder()->staff_notes;
+	}
+
+	private function delete_rejected_reversible_note() {
+		if ( $this->rejection_note_text() == $this->get_staff_note()) {
+			$this->set_staff_note( '' );
+			BoltLogger::write("STAFF_NOTE DELETE");
+		} else {
+			BoltLogger::write("STAFF_NOTE not delete cos already set '".$this->get_staff_note()."' not '".$this->rejection_note_text()."''");
+		}
+
+	}
+
+	private function add_rejected_reversible_note() {
+		if ( '' == $this->get_staff_note()) {
+			$this->set_staff_note( $this->rejection_note_text() );
+			BoltLogger::write("STAFF_NOTE SET");
+		} else {
+			BoltLogger::write("STAFF_NOTE not set cos already set '".$this->get_staff_note()."''");
+		}
+	}
+
+
+
 
 	/**
 	 * Makes non-blocking call to URL endpoint for cleaning up expired order creation resources
