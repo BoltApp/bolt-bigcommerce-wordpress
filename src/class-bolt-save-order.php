@@ -107,7 +107,7 @@ class Bolt_Save_Order
 		//TODO If shop owner changed default statuses https://store-5669f02hng.mybigcommerce.com/manage/orders/order-statuses
 
 		//payment a sale occurred (auth+capture)
-		if ( 'payment' === $bolt_data->type ) {
+		if ( ( 'payment' === $bolt_data->type ) || ( 'capture' === $bolt_data->type ) ) {
 			if ( $this->getorder()->order_is_digital ) {
 				$query['status_id'] = 10; // Completed
 			} else {
@@ -115,29 +115,25 @@ class Bolt_Save_Order
 			}
 			$query['payment_method'] = 'Bolt';
 			$query['payment_provider_id'] = $bolt_data->id;
-			$message = 'payment';
+			$message = $bolt_data->type;
 		// credit a credit/refund was issued
 		} elseif ( 'credit' === $bolt_data->type ) {
 			$query['refunded_amount'] = $bolt_data->amount / 100;
 			$query['status_id'] = 4; //Refunded
 			$message = 'refunded';
-		// capture a capture occurred
-		} elseif ( 'capture' === $bolt_data->type ) {
-			if (!in_array($this->getorder()->status_id,array(10,11))){ // neither Completed nor Awaiting Fulfillment
-				$query['status_id'] = 7; //Awaiting Payment
-				$message = 'processing';
-			} else {
-				$message = 'completed';
-			}
-			$query['payment_provider_id'] = $bolt_data->id;
 		// void a void occurred
 		} elseif ( 'void' === $bolt_data->type ) {
 			$query['status_id'] = 5; //Cancelled
 			$message = 'cancelled';
 		// auth an authorization was issued
 		} elseif ( 'auth' === $bolt_data->type ) {
-			$query['status_id'] = 1; //Pending
+			$query['status_id'] = 12; // Manual Verification Required
 			$query['payment_provider_id'] = $bolt_data->id;
+			$message = 'auth';
+		} elseif ( 'pending' === $bolt_data->type ) {
+			$query['status_id'] = 12; // Manual Verification Required
+			$query['payment_provider_id'] = $bolt_data->id;
+			$message = 'pending';
 		// rejected_reversible a transaction was rejected but decision can be overridden.
 		} elseif ( 'rejected_reversible' === $bolt_data->type ) {
 			$query['status_id'] = 12; // Manual Verification Required
