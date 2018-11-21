@@ -91,14 +91,13 @@ class Bolt_Shipping_And_Tax
 		//get Bigcommerce checkout
 
 		$bolt_cart_id_option = get_option( "bolt_cart_id_" . $bolt_order->cart->order_reference );
+		BoltLogger::write( print_r($bolt_cart_id_option,true). " = get_option( \"bolt_cart_id_\" . {$bolt_order->cart->order_reference} )" );
 		$this->bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
 
-		if (isset($bolt_cart_id_option['product'])) {
+		if ($bolt_cart_id_option['product']) {
 			//need to add product to cart cos user in product page
 			$this->add_product_to_cart($bolt_cart_id_option);
 		}
-
-		BoltLogger::write( print_r($bolt_cart_id_option,true). " = get_option( \"bolt_cart_id_\" . {$bolt_order->cart->order_reference} )" );
 
 		$checkout = new Bolt_Checkout($this->bigcommerce_cart_id);
 
