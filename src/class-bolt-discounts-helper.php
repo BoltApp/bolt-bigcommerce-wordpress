@@ -64,12 +64,13 @@ class Bolt_Discounts_Helper
 	public function apply_coupon_from_discount_hook()
 	{
 		try {
-			$bigcommerce_cart_id = get_option("bolt_cart_id_{$this->api_request->cart->order_reference}");
+			$bolt_cart_id_option = get_option("bolt_cart_id_{$this->api_request->cart->order_reference}");
+			$bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
+
 			BoltLogger::write("$bigcommerce_cart_id = get_option( \"bolt_cart_id_{$this->api_request->cart->order_reference}\" )" . print_r($this->api_request, true));
 			if (!$bigcommerce_cart_id) {
 				throw new Exception(__('Cart not found', 'bolt-bigcommerce-wordpress'), self::E_BOLT_INSUFFICIENT_INFORMATION);
 			}
-			$checkout = new Bolt_Checkout($bigcommerce_cart_id);
 			$discount_code = $this->api_request->discount_code;
 			BoltLogger::write("BEFORE ADD COUPON");
 			//try use $discount_code as coupon_code
@@ -81,34 +82,35 @@ class Bolt_Discounts_Helper
 				$coupon_name = $coupon_info[0]->name;
 				$type = "coupon";
 			}
-
-			//memorize how many coupons already been applied
-			$old_coupons_qty = 0;
-			while (isset($checkout->get()->data->cart->coupons[$old_coupons_qty])) {
-				//if coupon already applied return "ok"
-				$coupon = $checkout->get()->data->cart->coupons[$old_coupons_qty];
-				if ($coupon->code == $discount_code) {
-					BoltLogger::write("already apllied");
-					return set_version_headers(new WP_REST_Response(
-						(object)array(
-							"status" => "success",
-							"discount_code" => $discount_code,
-							"description" => $coupon_name,
-							"discount_type" => "fixed_amount",
-							"discount_amount" => (int)round($coupon->discounted_amount * 100)),
-						200,
-						array('X-Bolt-Cached-Value' => false)
-					));
-
-				}
-
-				$old_coupons_qty++;
-			}
+			$checkout = new Bolt_Checkout($bigcommerce_cart_id);
 
 			if ("coupon" == $type) {
 				//if coupon has type 'shipping_discount' or it works with specific delivery method
 				//and delivery method doesn't select the return error
 				//if (("shipping_discount" == $coupon_info->type) or isset($coupon_info->shipping_methods[0])) {
+
+				//memorize how many coupons already been applied
+				$old_coupons_qty = 0;
+				while (isset($checkout->get()->data->cart->coupons[$old_coupons_qty])) {
+					//if coupon already applied return "ok"
+					$coupon = $checkout->get()->data->cart->coupons[$old_coupons_qty];
+					if ($coupon->code == $discount_code) {
+						BoltLogger::write("already apllied");
+						return set_version_headers(new WP_REST_Response(
+							(object)array(
+								"status" => "success",
+								"discount_code" => $discount_code,
+								"description" => $coupon_name,
+								"discount_type" => "fixed_amount",
+								"discount_amount" => (int)round($coupon->discounted_amount * 100)),
+							200,
+							array('X-Bolt-Cached-Value' => false)
+						));
+
+					}
+
+					$old_coupons_qty++;
+				}
 
 				try {
 					$checkout->add_coupon($discount_code);
@@ -136,6 +138,8 @@ class Bolt_Discounts_Helper
 					array('X-Bolt-Cached-Value' => false)
 				));
 			}
+			throw new Exception("Invalid coupon code", SELF::E_BOLT_CODE_INVALID );
+			/*
 			//try use $discount_code as gift_code
 			$gift_info = BCClient::getCollection("/v2/gift_certificates?code=" . urlencode($discount_code));
 			BoltLogger::write("gift_info " . print_r($gift_info, true));
@@ -158,6 +162,8 @@ class Bolt_Discounts_Helper
 				}
 
 			}
+			*/
+
 			exit;
 		} catch (Exception $e) {
 			BoltLogger::write("error(" . $e->getCode() . ") " . $e->getMessage());
