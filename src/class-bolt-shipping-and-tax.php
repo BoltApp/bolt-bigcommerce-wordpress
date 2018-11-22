@@ -110,13 +110,17 @@ class Bolt_Shipping_And_Tax
 		//TODO test with delivery method (now tested only for digital products, not work if update_customer_id before update_address
 		//TODO test mixed cart (added before+button on cart page)
 		//TODO test for unregistered users
-		//TODO change customer_id only if necessary
+		//TODO
 
 		if (($bolt_cart_id_option["product"]['customer_id'])) {
-			BCCLIENT::updateResource("/v3/carts/{$this->bigcommerce_cart_id}",
-				array(
-					'customer_id'=> $bolt_cart_id_option["product"]['customer_id']
-				));
+			//change customer_id only if necessary
+			BoltLogger::write("change customer_id from '".$checkout->get()->data->cart->customer_id."' to '{$bolt_cart_id_option["product"]['customer_id']}'");
+			if ($checkout->get()->data->cart->customer_id <> $bolt_cart_id_option["product"]['customer_id']) {
+				BCCLIENT::updateResource("/v3/carts/{$this->bigcommerce_cart_id}",
+					array(
+						'customer_id'=> $bolt_cart_id_option["product"]['customer_id']
+					));
+			}
 		}
 
 

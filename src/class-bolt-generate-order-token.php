@@ -10,6 +10,8 @@ class Bolt_Generate_Order_Token
 
 	private $order_reference;
 
+	private $on_product_archive = false;
+
 	private $cart;
 	private function cart() {
 		if (!isset($this->cart)) {
@@ -21,6 +23,7 @@ class Bolt_Generate_Order_Token
 	public function __construct()
 	{
 		add_filter( 'bigcommerce/template=components/cart/cart-footer.php/data', array( $this, 'change_bigcommerce_cart_footer_template'), 10, 1 );
+		add_filter( 'bigcommerce/template=components/catalog/product-archive.php/options', array( $this, 'check_if_we_on_product_archive'), 10, 1 );
 		add_filter( 'bigcommerce/button/purchase', array( $this, 'change_bigcommerce_add_to_cart_button'), 10, 2);
 		$this->init_public_ajax();
 	}
@@ -50,6 +53,7 @@ class Bolt_Generate_Order_Token
 		//$variant_id = $this->get_variant_id( $product, $_POST );
 
 		//add product to cart
+		//TODO as well as woocommerce if product was added to cart AFTER product page generation it doesn't appear in Bolt cart
 		$quantity = array_key_exists( 'quantity', $_POST ) ? absint( $_POST[ 'quantity' ] ) : 1;
 		$options = array();
 		$modifiers = array();
@@ -109,7 +113,11 @@ class Bolt_Generate_Order_Token
 
 
 	public function change_bigcommerce_add_to_cart_button($button,$post_id) {
-		//TODO fix for /products page
+		if ($this->on_product_archive) {
+			//call from category page
+			return $button;
+		}
+
 		$result = \BoltPay\Helper::renderBoltTrackScriptTag();
 		$result .= \BoltPay\Helper::renderBoltConnectScriptTag();
 
@@ -131,6 +139,12 @@ JAVASCRIPT;
 		return $button.$result;
 
 
+	}
+
+	public function check_if_we_on_product_archive( $options ) {
+		$this->on_product_archive = true;
+		//we don't want to change something
+		return $options;
 	}
 
 

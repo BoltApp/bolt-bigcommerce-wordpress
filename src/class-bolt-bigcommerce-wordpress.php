@@ -73,7 +73,7 @@ class Bolt_Bigcommerce_Wordpress
 	 */
 	public function init_bolt_api()
 	{
-		//TODO: move isSandbocMode to admin settings page
+		//TODO: move isSandboxMode to admin settings page
 		$config = require(dirname( __FILE__ ) . '/../lib/config_bolt_php.php');
 		\BoltPay\Bolt::$apiKey = $this->get_option( "api_key" );
 		\BoltPay\Bolt::$signingSecret = $this->get_option( "signing_secret" );
