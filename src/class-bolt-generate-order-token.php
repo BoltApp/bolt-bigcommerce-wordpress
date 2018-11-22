@@ -307,8 +307,14 @@ JAVASCRIPT;
 		}
 
 		$hints = $this->calculate_hints();
+		$authcapture = get_option( 'bolt-bigcommerce_paymentaction' );
 
-		$result = $this->render( "main.js.php", array( "orderToken" => $orderToken, "hints" => $hints ),false );
+		$result = $this->render( 'main.js.php',
+			array(
+				'orderToken' => $orderToken,
+				'hints' => $hints,
+				'authcapture' => $authcapture,
+			),false );
 		return $result;
 	}
 

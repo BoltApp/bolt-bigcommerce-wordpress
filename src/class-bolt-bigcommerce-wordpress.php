@@ -73,13 +73,11 @@ class Bolt_Bigcommerce_Wordpress
 	 */
 	public function init_bolt_api()
 	{
-		//TODO: move isSandboxMode to admin settings page
-		$config = require(dirname( __FILE__ ) . '/../lib/config_bolt_php.php');
 		\BoltPay\Bolt::$apiKey = $this->get_option( "api_key" );
 		\BoltPay\Bolt::$signingSecret = $this->get_option( "signing_secret" );
 		\BoltPay\Bolt::$apiPublishableKey = $this->get_option( "publishable_key" );
-		\BoltPay\Bolt::$isSandboxMode = @$config['IS_SANDBOX'];
-		\BoltPay\Bolt::$authCapture = @$config['AUTH_CAPTURE'];
+		\BoltPay\Bolt::$isSandboxMode = ('yes' == $this->get_option('testmode' ) );
+		\BoltPay\Bolt::$authCapture = ('true' == $this->get_option( 'paymentaction' ) );
 		\BoltPay\Bolt::$connectSandboxBase = 'https://connect-sandbox.bolt.com';
 		\BoltPay\Bolt::$connectProductionBase = 'https://connect.bolt.com';
 		\BoltPay\Bolt::$apiSandboxUrl = 'https://api-sandbox.bolt.com';
@@ -118,9 +116,9 @@ class Bolt_Bigcommerce_Wordpress
 	 *
 	 * @return string Key value
 	 */
-	protected function get_option( $key )
+	protected function get_option( $key , $default=false )
 	{
-		return esc_attr( get_option( "bolt-bigcommerce_{$key}" ) );
+		return esc_attr( get_option( "bolt-bigcommerce_{$key}"  , $default ) );
 	}
 
 

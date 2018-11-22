@@ -30,7 +30,7 @@
 
     var cart = {
         "orderToken": "<?= $orderToken;?>",
-        "authcapture": true
+        "authcapture": <?= $authcapture;?>
     };
     var hints = <?= $hints;?>;
     var callbacks = {

@@ -67,6 +67,27 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 				'desc_tip' => true,
 				'placeholder' => __( 'Enter Processing Key', 'bolt-bigcommerce-wordpress' ),
 			),
+			'testmode'           => array(
+				'title'       => __( 'Bolt sandbox', 'bolt-bigcommerce-wordpress' ),
+				'type'        => 'checkbox',
+				'label'       => __( 'Enable Bolt sandbox', 'bolt-bigcommerce-wordpress' ),
+				'default'     => 'yes',
+				'description' => __( 'Bolt sandbox can be used to test payments.', 'bolt-bigcommerce-wordpress' ),
+			),
+			'paymentaction'   => array(
+				'title'       => __( 'Payment action', 'bolt-bigcommerce-wordpress' ),
+				'type'        => 'select',
+				'class'       => 'wc-enhanced-select',
+				'description' => __( 'Choose whether you wish to capture funds immediately or authorize payment only.', 'bolt-bigcommerce-wordpress' ),
+				'default'     => 'true',
+				'desc_tip'    => true,
+				'options'     => array(
+					'true'    => __( 'Capture', 'bolt-bigcommerce-wordpress' ),
+					'false'   => __( 'Authorize', 'bolt-bigcommerce-wordpress' ),
+				),
+			),
+
+
 		);
 	}
 
@@ -82,18 +103,57 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 		echo '<form action="' . admin_url() . 'options.php" method="POST">';
 		settings_fields( 'bolt-bigcommerce' );
 		echo '<table class="form-table">';
-		foreach ( $this->form_fields as $key => $form_field ) {
-			$name = "bolt-bigcommerce_{$key}";
-			echo '<tr>
-    <th scope="row"><label for="' . $name . '">' . $form_field["title"] . '</label></th>
-    <td><input name="' . $name . '" type="text" id="' . $name . '" aria-describedby="' . $name . '-description" value="' . $this->get_option( $key ) . '" class="regular-text" />
-    <p class="description" id="' . $name . '-description">' . $form_field["description"] . '</p></td>
-    </tr>';
-		}
+		$this->generate_settings_html();
 		do_settings_sections( 'bolt-bigcommerce' );
 		echo '</table>';
 		submit_button();
 		echo '</form>';
 	}
+
+	public function generate_settings_html() {
+		foreach ( $this->form_fields as $key => $form_field ) {
+			$name = "bolt-bigcommerce_{$key}";
+
+			if ( method_exists( $this, 'generate_' . $form_field['type'] . '_html' ) ) {
+				$this->{'generate_' . $form_field['type'] . '_html'}( $key, $name, $form_field );
+			} else {
+				$this->generate_text_html( $key, $name, $form_field );
+			}
+		}
+	}
+
+	public function generate_text_html( $key, $name, $form_field ) {
+		echo '<tr>
+    <th scope="row"><label for="' . $name . '">' . $form_field["title"] . '</label></th>
+    <td><input name="' . $name . '" type="text" id="' . $name . '" aria-describedby="' . $name . '-description" value="' . $this->get_option( $key ) . '" class="regular-text" />
+    <p class="description" id="' . $name . '-description">' . $form_field["description"] . '</p></td>
+    </tr>';
+	}
+
+	public function generate_checkbox_html( $key, $name, $form_field ) {
+		$value = $this->get_option( $key , $form_field['default'] );
+		echo '<tr>
+	<th scope="row">' . $form_field["title"] . '</th>
+	<td> <fieldset><legend class="screen-reader-text"><span>' . $form_field["title"] . '</span></legend><label for="' . $name . '">
+	<input name="' . $name . '" type="checkbox" id="' . $name . '" value="' . $form_field['default'] . '" ' . ( 'yes' == $value ? 'checked' : '') . ' />
+	' . $form_field["label"] . '</label>
+	<p class="description" id="' . $name . '-description">' . $form_field["description"] . '</p>
+</fieldset></td>
+</tr>';
+	}
+
+	public function generate_select_html( $key, $name, $form_field ) {
+		$value = $this->get_option( $key );
+		if ( false === $value ) $value = $form_field['default'];
+		echo '<tr>
+	<th scope="row"><label for="' . $name . '">' . $form_field["title"] . '</label></th>
+	<td>
+	<select name="' . $name . '" id="' . $name . '">';
+		foreach ( $form_field["options"] as $option_name => $option_value ) {
+			echo '<option ' . ($option_name == $value ? 'selected="selected" ' : '') . 'value="'. $option_name . '">' . $option_value . '</option>';
+		}
+		echo '</select><p class="description" id="' . $name . '-description">' . $form_field["description"] . '</p>';
+	}
+
 
 }
