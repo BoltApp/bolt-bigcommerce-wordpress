@@ -64,6 +64,7 @@ class Bolt_Checkout
 	 */
 	public function update_address($address)
 	{
+		BoltLogger::write("update_address input parametrs ".var_export($address,true));
 		if ( $this->address_is_change( $this->get()->data->billing_address, $address ) ) {
 			//add or update billing address
 			$data = BCClient::createResource( "/v3/checkouts/{$this->checkout_id}/billing-address", $address );
@@ -109,6 +110,7 @@ class Bolt_Checkout
 	 * @param object $consignment
 	 */
 	public function add_or_update_consignment($consignment) {
+		BoltLogger::write("add_or_update_consignment input parameters ".var_export($consignment,true));
 		if ( !isset( $this->get()->data->consignments[0] ) ) { //consignment not created
 			$params = array( $consignment );
 			BoltLogger::write( "Add a New Consignment /v3/checkouts/{$this->checkout_id}/consignments?include=consignments.available_shipping_options" );
@@ -125,10 +127,10 @@ class Bolt_Checkout
 			BoltLogger::write( "UPDATE Consignment /v3/checkouts/{$this->checkout_id}/consignments/$consignment_id?include=consignments.available_shipping_options" );
 			BoltLogger::write( json_encode( $consignment ) );
 			$data = BCClient::updateResource( "/v3/checkouts/{$this->checkout_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $consignment );
-			if (!$checkout) {
+			if (!$data) {
 				BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't update consignment" ) );
 			}
-			BoltLogger::write( "New Consignment update answer " . print_r( $checkout, true ) );
+			BoltLogger::write( "New Consignment update answer " . print_r( $data, true ) );
 		}
 		$this->_data = $data;
 	}

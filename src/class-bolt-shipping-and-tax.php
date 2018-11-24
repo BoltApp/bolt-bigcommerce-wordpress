@@ -59,6 +59,10 @@ class Bolt_Shipping_And_Tax
 
 
 	//return shipping methods
+	protected function get_checkout_api($cart_id) {
+		return new Bolt_Checkout($cart_id);
+	}
+
 
 	/**
 	 * Return object with all accessable shipping methods & tax
@@ -71,15 +75,13 @@ class Bolt_Shipping_And_Tax
 		$signatureVerifier = new \BoltPay\SignatureVerifier(
 			\BoltPay\Bolt::$signingSecret
 		);
-		$bolt_order_json = file_get_contents( 'php://input' );
-		$bolt_order = json_decode( $bolt_order_json );
-		$this->order_reference = $bolt_order->cart->order_reference;
+		$bolt_order_json = file_get_contents('php://input');
 
-		BoltLogger::write( "handler_shipping_tax " . print_r( $bolt_order, true ) );
-
-		if ( !$signatureVerifier->verifySignature( $bolt_order_json, $hmacHeader ) ) {
-			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Failed HMAC Authentication" ) );
+		if (!$signatureVerifier->verifySignature($bolt_order_json, $hmacHeader)) {
+			BugsnagHelper::getBugsnag()->notifyException(new Exception("Failed HMAC Authentication"));
 		}
+
+		$bolt_order = json_decode($bolt_order_json);
 
 		//try get data from cache
 		$bolt_cart_md5 = md5( $bolt_order_json );
@@ -88,18 +90,38 @@ class Bolt_Shipping_And_Tax
 			wp_send_json( json_decode( $cached_estimate ) );
 		}
 
+		$shipping_and_tax_payload = $this->evaluate_shipping_tax( $bolt_order );
+
+		BoltLogger::write( "response shipping options" . print_r( $shipping_and_tax_payload, true ) );
+
+		// Cache the shipping and tax response
+		update_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5, json_encode( $shipping_and_tax_payload ), false );
+
+		wp_send_json( $shipping_and_tax_payload );
+	}
+
+	public function evaluate_shipping_tax( $bolt_order ) {
+		BoltLogger::write( "evaluate_shipping_tax " . var_export( $bolt_order, true ) );
+
+		$this->order_reference = $bolt_order->cart->order_reference;
+
 		//get Bigcommerce checkout
 
 		$bolt_cart_id_option = get_option( "bolt_cart_id_" . $bolt_order->cart->order_reference );
 		BoltLogger::write( print_r($bolt_cart_id_option,true). " = get_option( \"bolt_cart_id_\" . {$bolt_order->cart->order_reference} )" );
 		$this->bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
+		if (!$this->bigcommerce_cart_id) {
+			echo "**!!**";
+			BugsnagHelper::getBugsnag()->notifyException(new Exception("Can't read bigcommerce_cart_id for " .$this->bigcommerce_cart_id ) );
+			return false;
+		}
 
 		if ($bolt_cart_id_option['product']) {
 			//need to add product to cart cos user in product page
 			$this->add_product_to_cart($bolt_cart_id_option);
 		}
 
-		$checkout = new Bolt_Checkout($this->bigcommerce_cart_id);
+		$checkout = $this->get_checkout_api( $this->bigcommerce_cart_id );
 
 		//files names differ between BC v2 and v3 API. For example country_code <==> country_iso2
 		$address = $this->convert_bolt_address_to_bc( $bolt_order->cart->billing_address );
@@ -110,7 +132,6 @@ class Bolt_Shipping_And_Tax
 		//TODO test with delivery method (now tested only for digital products, not work if update_customer_id before update_address
 		//TODO test mixed cart (added before+button on cart page)
 		//TODO test for unregistered users
-		//TODO
 
 		if (($bolt_cart_id_option["product"]['customer_id'])) {
 			//change customer_id only if necessary
@@ -123,7 +144,6 @@ class Bolt_Shipping_And_Tax
 			}
 		}
 
-
 		//Add or update consignment to Checkout
 		$consignment = new stdClass();
 		//In Bolt  the shipping address is the same as the billing address
@@ -131,6 +151,7 @@ class Bolt_Shipping_And_Tax
 		//send all physical products to this address
 		$bolt_shipping_options = array();
 		$physical_items = $checkout->get()->data->cart->line_items->physical_items;
+		BoltLogger::write("checkout->get()=".var_export($checkout->get(),true) );
 		if ( !empty( $physical_items ) ) { //shipping is required
 			foreach ( $physical_items as $physical_item ) {
 				$consignment->line_items[] = array(
@@ -159,11 +180,7 @@ class Bolt_Shipping_And_Tax
 			'shipping_options' => $bolt_shipping_options,
 		);
 
-		// Cache the shipping and tax response
-		update_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5, json_encode( $shipping_and_tax_payload ), false );
-
-		BoltLogger::write( "response shipping options" . print_r( $shipping_and_tax_payload, true ) );
-		wp_send_json( $shipping_and_tax_payload );
+		return $shipping_and_tax_payload;
 	}
 
 	private function add_product_to_cart($bolt_cart_id_option) {
