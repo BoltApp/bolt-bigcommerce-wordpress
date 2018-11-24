@@ -1,26 +1,11 @@
 <?php
-/**
- * Class SampleTest
- *
- * @package Bolt_Bigcommerce_Wordpress
- */
+
 
 class Bolt_Bigcommerce_Wordpress_test extends Bolt_Bigcommerce_Wordpress {
 	public function get_option( $key , $default=false )  { return parent::get_option( $key , $default ); }
 }
 
-/**
- * Sample test case.
- */
-class BoltTest extends WP_UnitTestCase {
-
-	/**
-	 * A single example test.
-	 */
-	public function test_sample() {
-		// Replace this with some actual testing code.
-		$this->assertTrue( true );
-	}
+class BoltGenerateOrderTokenTest extends WP_UnitTestCase {
 
 	public function test_constants_defined() {
 		$this->assertTrue( defined( 'BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH' ) );
@@ -155,5 +140,30 @@ class BoltTest extends WP_UnitTestCase {
 		$this->assertFalse( $bolt_generate_order_token->bolt_generate_cart_data( $this->CartsData(0 ) ) );
 		$this->assertEquals( $bolt_generate_order_token->getError(), 'We have only 4 items of \'simple test product\' on our stock' );
 	}
+
+	public function test_bolt_generate_cart_data_product_is_enough () {
+		$bolt_generate_order_token = $this->getMockBuilder('Bolt_Generate_Order_Token')
+			->setMethods( array('api_call_get_product') )
+			->getMock();
+		$bolt_generate_order_token -> expects( $this->any() )
+			->method('api_call_get_product')
+			->will($this->returnValue(
+				(object) array
+				(
+					'id' => 113,
+					'name' => 'simple test product',
+					'sku' => 'test2',
+					'calculated_price' => 20.0000,
+					'is_visible' => 1,
+					'is_featured' => '',
+					'inventory_level' => 5,
+					'inventory_warning_level' => 0,
+					'inventory_tracking' => 'simple',
+					'availability' => 'available',
+				)
+			));
+		$this->assertFalse( false == $bolt_generate_order_token->bolt_generate_cart_data( $this->CartsData(0 ) ) );
+	}
+
 
 }
