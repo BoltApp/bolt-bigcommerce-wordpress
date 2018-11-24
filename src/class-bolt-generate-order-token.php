@@ -67,7 +67,7 @@ class Bolt_Generate_Order_Token
 		$response = $mapper->map();
 
 		//create bolt cart and prepare JS script
-		$js_script = $this->bolt_cart_button($response);
+		$js_script = $this->bolt_create_order_and_generate_button_code($response);
 
 		//remove product from cart
 
@@ -156,11 +156,12 @@ JAVASCRIPT;
 	 */
 	public function change_bigcommerce_cart_footer_template($data)
 	{
-		if ($this->check_products_availability($data['cart'])) {
+		$cart_code = $this->bolt_create_order_and_generate_button_code($data['cart']);
+		if ( $cart_code ) {
 			$data['actions'] .= '<div class="bc-cart-actions"><div class="bolt-checkout-button with-cards"></div></div>';
 			$data['actions'] .= \BoltPay\Helper::renderBoltTrackScriptTag();
 			$data['actions'] .= \BoltPay\Helper::renderBoltConnectScriptTag();
-			$data['actions'] .= '<script>'.$this->bolt_cart_button($data['cart']).'</script>';
+			$data['actions'] .= "<script>{$cart_code}</script>";
 
 			$this->update_bolt_cart_id_option($data['cart']["cart_id"]);
 
@@ -194,6 +195,16 @@ JAVASCRIPT;
 
 	}
 
+	protected function api_call_get_product( $product_id ) {
+		$url = "/v2/products/{$product_id}?include=@summary";
+		return BCClient::getCollection( $url );
+	}
+
+	protected function api_call_get_product_variant($product_id, $variant_id) {
+		$url = "/v3/catalog/products/{$product_id}/variants/{$variant_id}";
+		return BCClient::getCollection( $url );
+	}
+
 	/**
 	 * Check if products in cart are available now
 	 *
@@ -201,10 +212,12 @@ JAVASCRIPT;
 	 *
 	 * @return bool
 	 */
-	private function check_products_availability($cart) {
+
+	protected function check_products_availability($cart) {
 		$availability = true;
 		foreach ($cart["items"] as $item) {
-			$product = BCClient::getCollection("/v2/products/{$item["product_id"]}?include=@summary");
+			$product = $this->api_call_get_product( $item["product_id"] );
+			BoltLogger::write( 'call availability result' . print_r($product,true) );
 			if ("available" != $product->availability) {
 				$this->set_availability_error($product->name,0);
 				$availability = false;
@@ -215,7 +228,7 @@ JAVASCRIPT;
 				break;
 			} else if ("sku" == $product->inventory_tracking) {
 				//need to do additional API call for product withy variant
-				$variant_product = BCClient::getCollection("/v3/catalog/products/{$item["product_id"]}/variants/{$item["variant_id"]}");
+				$variant_product = $this->api_call_get_product_variant( $item["product_id"], $item["variant_id"]);
 				if ($variant_product->data->inventory_level<$item["quantity"]) {
 					$options = "";
 					foreach($variant_product->data->option_values as $option_id=>$option) {
@@ -233,15 +246,50 @@ JAVASCRIPT;
 		return $availability;
 	}
 
+	function bolt_create_order_and_generate_button_code( $bigcommerce_cart ) {
+
+		$cartData = $this->bolt_generate_cart_data( $bigcommerce_cart );
+		if ( !$cartData ) {
+			return false;
+		}
+
+		$client = new \BoltPay\ApiClient( [
+			'api_key' => \BoltPay\Bolt::$apiKey,
+			'is_sandbox' => \BoltPay\Bolt::$isSandboxMode
+		] );
+
+		$response = $client->createOrder( $cartData );
+		$orderToken = $response->isResponseSuccessful() ? @$response->getBody()->token : '';
+		BoltLogger::write( "Create cart orderToken " . $orderToken );
+		if ( !$orderToken ) {
+			echo "error Bolt order create";
+			print_r( $response );
+			print_r( $cartData );
+			print_r( $bigcommerce_cart );
+			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Bolt Order token doesn't create" ) );
+			exit;
+		}
+
+		return $this->generate_button_code( $orderToken );
+	}
+
+
 	/**
 	 * Render html and js code for bolt checkout button
 	 * @param array $bigcommerce_cart Bigcommerce cart content
+	 *
+	 * @return cartdata or false if can't create cart
 	 */
-	function bolt_cart_button( $bigcommerce_cart )
+	function bolt_generate_cart_data( $bigcommerce_cart )
 	{
+		if ( !$this->check_products_availability( $bigcommerce_cart ) ) {
+			return false;
+		}
+
 		//TODO: (later) If the cart changes without page reload handle then send to Bolt the new cart
 		//In bolt-woocommerce we use page reload at event 'updated_cart_totals' but I don't see JS event on bigcommerce-wordpress
-		BoltLogger::write( "bolt_cart_button " . print_r( $bigcommerce_cart, true ) );
+		BoltLogger::write( "bolt_generate_cart_data from " . print_r( $bigcommerce_cart, true ) );
+		BoltLogger::write( "bolt_generate_cart_data from " . json_encode( $bigcommerce_cart) );
 
 		$currency_code = get_option( BigCommerce\Settings\Sections\Currency::CURRENCY_CODE, '' );
 
@@ -288,24 +336,10 @@ JAVASCRIPT;
 		}
 		$cartData = array( "cart" => $cart );
 		BoltLogger::write( "Create cart " . print_r( $cartData, true ) );
+		return $cartData;
+	}
 
-		$client = new \BoltPay\ApiClient( [
-			'api_key' => \BoltPay\Bolt::$apiKey,
-			'is_sandbox' => \BoltPay\Bolt::$isSandboxMode
-		] );
-
-		$response = $client->createOrder( $cartData );
-		$orderToken = $response->isResponseSuccessful() ? @$response->getBody()->token : '';
-		BoltLogger::write( "Create cart orderToken " . $orderToken );
-		if ( !$orderToken ) {
-			echo "error Bolt order create";
-			print_r( $response );
-			print_r( $cartData );
-			print_r( $bigcommerce_cart );
-			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Bolt Order token doesn't create" ) );
-			exit;
-		}
-
+	function generate_button_code( $orderToken ) {
 		$hints = $this->calculate_hints();
 		$authcapture = get_option( 'bolt-bigcommerce_paymentaction' );
 
@@ -412,4 +446,13 @@ JAVASCRIPT;
 			return $output;
 		}
 	}
+
+	/**
+	 * @return mixed
+	 */
+	public function getError()
+	{
+		return $this->error;
+	}
+
 }

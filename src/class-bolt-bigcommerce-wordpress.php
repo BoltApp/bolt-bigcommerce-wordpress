@@ -12,7 +12,6 @@ class Bolt_Bigcommerce_Wordpress
 	 */
 	public function init()
 	{
-		add_action( 'bigcommerce/cart/proceed_to_checkout', array( $this, 'bolt_cart_button' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		$this->init_bolt_api();
 		$this->init_bigcommerce_api();
