@@ -44,6 +44,7 @@ class Bolt_Shipping_And_Tax
 		$bc_address = new stdClass();
 		$bc_address->first_name = $bolt_address->first_name;
 		$bc_address->last_name = $bolt_address->last_name;
+		//TODO ADD company from Bolt
 		$bc_address->company = "";
 		$bc_address->address1 = $bolt_address->street_address1;
 		$bc_address->address2 = $bolt_address->street_address2;
@@ -111,8 +112,7 @@ class Bolt_Shipping_And_Tax
 		BoltLogger::write( print_r($bolt_cart_id_option,true). " = get_option( \"bolt_cart_id_\" . {$bolt_order->cart->order_reference} )" );
 		$this->bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
 		if (!$this->bigcommerce_cart_id) {
-			echo "**!!**";
-			BugsnagHelper::getBugsnag()->notifyException(new Exception("Can't read bigcommerce_cart_id for " .$this->bigcommerce_cart_id ) );
+			BugsnagHelper::getBugsnag()->notifyException(new Exception("Can't read bigcommerce_cart_id for " .$bolt_order->cart->order_reference ) );
 			return false;
 		}
 

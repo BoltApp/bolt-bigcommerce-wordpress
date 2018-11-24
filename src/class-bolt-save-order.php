@@ -164,6 +164,24 @@ class Bolt_Save_Order
 		return $message;
 	}
 
+	protected function get_bolt_client() {
+		return new \BoltPay\ApiClient( [
+		'api_key' => \BoltPay\Bolt::$apiKey,
+		'is_sandbox' => \BoltPay\Bolt::$isSandboxMode
+	] );
+	}
+
+	protected function get_checkout_api($bigcommerce_cart_id) {
+		return new Bolt_Checkout($bigcommerce_cart_id);
+	}
+
+	protected function update_order( $order_id, $body )
+	{
+		BoltLogger::write("Order {$order_id} UPDATE ORDER STATUS \"/v2/orders/{$order_id}\", " . json_encode($body));
+		BCClient::updateResource("/v2/orders/{$order_id}", $body);
+	}
+
+
 	/**
 	 * Create order in Bigcommerce
 	 *
@@ -176,12 +194,18 @@ class Bolt_Save_Order
 	 */
 	function bolt_create_order( $bolt_reference, $order_reference, $bolt_data, $is_json = false )
 	{
+		BoltLogger::write("### params =".var_export(array(
+				"bolt_reference"=>$bolt_reference,
+				"order_reference"=>$order_reference,
+				"bolt_data"=>$bolt_data,
+				"is_json"=>$is_json,
+			),true));
 		$result = array(
 			'status' => 'success',
 			'order_id' => 0,
 		);
 		// prevent re-creation order
-		BoltLogger::write( "bolt_create_order( {$bolt_reference}, {$order_reference}) bigcommerce_cart_id = {$bigcommerce_cart_id})" );
+		BoltLogger::write( "bolt_create_order( {$bolt_reference}, {$order_reference}) )" );
 		$bc_order_id = get_option( "bolt_order_{$order_reference}" );
 		if ( $bc_order_id ) {
 			BoltLogger::write( "prevent re-creation order" );
@@ -194,6 +218,10 @@ class Bolt_Save_Order
 		$bolt_cart_id_option = get_option( "bolt_cart_id_{$order_reference}" );
 
 		$bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
+		if (!$bigcommerce_cart_id) {
+			BugsnagHelper::getBugsnag()->notifyException(new Exception("Can't read bigcommerce_cart_id for " .$order_reference ) );
+			return false;
+		}
 
 		if ( $is_json ) {
 			$shipment = $bolt_data->shipping_option->value;
@@ -206,14 +234,13 @@ class Bolt_Save_Order
 				$cookie_life = apply_filters( 'bigcommerce/cart/cookie_lifetime', 30 * DAY_IN_SECONDS );
 				$secure      = ( 'https' === parse_url( home_url(), PHP_URL_SCHEME ) );
 				$cookie_result = setcookie( 'bigcommerce_cart_id', $bigcommerce_cart_id, time() + $cookie_life, COOKIEPATH, COOKIE_DOMAIN, $secure );
-				BoltLogger::write("{$cookie_result} = setcookie( bigcommerce_cart_id, {$cart_id}, time() + ".$cookie_life.", ".COOKIEPATH.", ".COOKIE_DOMAIN.", $secure );");
+				BoltLogger::write("{$cookie_result} = setcookie( bigcommerce_cart_id, {$bigcommerce_cart_id}, time() + ".$cookie_life.", ".COOKIEPATH.", ".COOKIE_DOMAIN.", $secure );");
 			}
 			//get data from Bolt transaction
-			$bolt_client = new \BoltPay\ApiClient( [
-				'api_key' => \BoltPay\Bolt::$apiKey,
-				'is_sandbox' => \BoltPay\Bolt::$isSandboxMode
-			] );
+			$bolt_client = $this->get_bolt_client();
 			$bolt_transaction = $bolt_client->getTransactionDetails( $bolt_reference )->getBody();
+			BoltLogger::write("### bolt_input[getTransactionDetails] ". var_export($bolt_reference, true) );
+			BoltLogger::write("### bolt_output[getBody] ". var_export($bolt_transaction, true) );
 			BoltLogger::write( "bolt_transaction " . print_r( $bolt_transaction, true ) );
 			$bolt_billing_address = $bolt_transaction->order->cart->billing_address;
 			$shipment = $bolt_transaction->order->cart->shipments[0];
@@ -221,19 +248,19 @@ class Bolt_Save_Order
 		$shipping_option_id = $shipment->reference;
 		BoltLogger::write( "shipment" . print_r( $shipment, true ) );
 
-		$checkout = new Bolt_Checkout($bigcommerce_cart_id);
+		$checkout = $this->get_checkout_api($bigcommerce_cart_id);
 
 		//set selected shipping method
 		if ( "no_shipping" <> $shipping_option_id ) {
 			$checkout->set_shipping_option($shipping_option_id);
+			BoltLogger::write("### bigcommerce_input[set_shipping_option] ". var_export($shipping_option_id, true ) );
 		}
 		$order_id = $checkout->create_order();
 
 		//make order complete
 		$pending_status_id = 1; //TODO Get status id from BC
 		$body = array( "status_id" => $pending_status_id );
-		BoltLogger::write( "Order {$order_id} UPDATE ORDER STATUS \"/v2/orders/{$order_id}\", " . json_encode( $body ) );
-		BCClient::updateResource( "/v2/orders/{$order_id}", $body );
+		$this->update_order( $order_id, array( "status_id" => $pending_status_id ) );
 
 		//save Bigcommerce order id
 		add_option( "bolt_order_{$order_reference}", $order_id );
