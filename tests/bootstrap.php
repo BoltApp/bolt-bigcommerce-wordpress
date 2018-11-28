@@ -43,10 +43,9 @@ function _manually_load_plugin() {
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
-echo "*".$_tests_dir,"*";
-if (!file_exists($_tests_dir.'/plugins')) mkdir($_tests_dir.'/plugins');
-if (!file_exists($_tests_dir.'/plugins/bigcommerce-for-wordpress'))mkdir($_tests_dir.'/plugins/bigcommerce-for-wordpress' );
-$file = fopen($_tests_dir.'/plugins/bigcommerce-for-wordpress/bigcommerce.php','w');
+$bigcommerce_dir =  '/tmp/wordpress/wp-content/plugins/bigcommerce-for-wordpress';
+if (!file_exists($bigcommerce_dir)) mkdir($bigcommerce_dir );
+$file = fopen($bigcommerce_dir.'/bigcommerce.php','w');
 fwrite ($file,"<?php>");
 fclose ($file);
 

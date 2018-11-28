@@ -9,6 +9,7 @@ class BoltSaveOrderTest extends WP_UnitTestCase
 	public function test_CreateOrder_JsonCall_CallCheckoutMethodsSetShippingOptionAndCreateOrder($bolt_reference, $order_reference, $bolt_data, $is_json)
 	{
 		$mock_checkout = $this->getMockBuilder('Bolt_Checkout')
+			->disableOriginalConstructor()
 			->setMethods(array('set_shipping_option','create_order','delete'))
 			->getMock();
 

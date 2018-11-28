@@ -45,6 +45,7 @@ class BoltDiscountsHelperTest extends WP_UnitTestCase
 		update_option("bolt_cart_id_" . $order_reference, array('cart_id' => true));
 
 		$stub_checkout_api = $this->getMockBuilder('Bolt_Checkout')
+			->disableOriginalConstructor()
 			->setMethods(array('get'))
 			->getMock();
 		$stub_checkout_api->method('get')->willReturn($data->get_checkout_with_coupon_applied());
@@ -72,6 +73,7 @@ class BoltDiscountsHelperTest extends WP_UnitTestCase
 		update_option("bolt_cart_id_" . $order_reference, array('cart_id' => true));
 
 		$stub_checkout_api = $this->getMockBuilder('Bolt_Checkout')
+			->disableOriginalConstructor()
 			->setMethods(array('get'))
 			->getMock();
 

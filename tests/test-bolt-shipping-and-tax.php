@@ -14,6 +14,7 @@ class BoltShippingAndTaxTest extends WP_UnitTestCase
 		update_option("bolt_cart_id_" . $bolt_order->cart->order_reference, array('cart_id' => true));
 
 		$mock_checkout = $this->getMockBuilder('Bolt_Checkout')
+			->disableOriginalConstructor()
 			->setMethods(array('get', 'update_address', 'add_or_update_consignment'))
 			->getMock();
 
