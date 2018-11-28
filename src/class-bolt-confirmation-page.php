@@ -16,6 +16,7 @@ class Bolt_Confirmation_Page
 	 *
 	 * @return string page HTML code
 	 */
+	//TODO Add test when Bigcommerce became open beta
 	public function shortcode()
 	{
 		if ( $_SESSION["bolt_order_id"] ) {

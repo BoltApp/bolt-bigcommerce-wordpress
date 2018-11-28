@@ -26,34 +26,22 @@ class Bolt_Discounts_Helper
 	const E_BOLT_ITEMS_NOT_ELIGIBLE = 6207;
 	const E_BOLT_SERVICE = 6001;
 
-	/**
-	 * Reference to cart or order object.
-	 *
-	 * @since 1.2.7
-	 * @var mixed
-	 */
-	protected $object;
-
-	/**
-	 * Reference to the transaction object retrieved from the Bolt API endpoint.
-	 *
-	 * @since 1.2.7
-	 * @var   WC_Cart
-	 */
 	private $api_request;
 
-	/**
-	 * Constructor Function.
-	 *
-	 * @since  1.2.7
-	 * @access public
-	 *
-	 * @param  mixed $object Cart or order object.
-	 *
-	 */
 	public function __construct($object = array())
 	{
 		$this->api_request = $object;
+		BoltLogger::write("Bolt_Discounts_Helper _construct" . var_export($object, true));
+	}
+
+	protected function get_coupon_info($discount_code) {
+		try {
+			$coupon_info = BCClient::getCollection("/v2/coupons?code=" . urlencode($discount_code));
+			BoltLogger::write("coupon_info " . var_export($coupon_info, true));
+		} catch (Exception $e) {
+			$coupon_info = "";
+		}
+		return $coupon_info;
 	}
 
 	/**
@@ -63,6 +51,24 @@ class Bolt_Discounts_Helper
 	 */
 	public function apply_coupon_from_discount_hook()
 	{
+		$answer = $this->evaluate_answer_for_discount_hook();
+		if ("success" == $answer["status"]) {
+			$http_code = 200;
+		} else {
+			$http_code = 422;
+		}
+		return set_version_headers(new WP_REST_Response(
+			(object)$answer,
+			$http_code,
+			array('X-Bolt-Cached-Value' => false)
+		));
+	}
+
+	protected function get_checkout_api($bigcommerce_cart_id) {
+		return new Bolt_Checkout($bigcommerce_cart_id);
+	}
+
+	public function evaluate_answer_for_discount_hook() {
 		try {
 			$bolt_cart_id_option = get_option("bolt_cart_id_{$this->api_request->cart->order_reference}");
 			$bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
@@ -75,14 +81,13 @@ class Bolt_Discounts_Helper
 			BoltLogger::write("BEFORE ADD COUPON");
 			//try use $discount_code as coupon_code
 			$type = "";
-			$coupon_info = BCClient::getCollection("/v2/coupons?code=" . urlencode($discount_code));
-			BoltLogger::write("coupon_info " . print_r($coupon_info, true));
+			$coupon_info = $this->get_coupon_info($discount_code);
 			if (isset($coupon_info[0]->name)) {
 				//it's coupon
 				$coupon_name = $coupon_info[0]->name;
 				$type = "coupon";
 			}
-			$checkout = new Bolt_Checkout($bigcommerce_cart_id);
+			$checkout = $this->get_checkout_api($bigcommerce_cart_id);
 
 			if ("coupon" == $type) {
 				//if coupon has type 'shipping_discount' or it works with specific delivery method
@@ -96,16 +101,13 @@ class Bolt_Discounts_Helper
 					$coupon = $checkout->get()->data->cart->coupons[$old_coupons_qty];
 					if ($coupon->code == $discount_code) {
 						BoltLogger::write("already apllied");
-						return set_version_headers(new WP_REST_Response(
-							(object)array(
+						return array(
 								"status" => "success",
 								"discount_code" => $discount_code,
 								"description" => $coupon_name,
 								"discount_type" => "fixed_amount",
-								"discount_amount" => (int)round($coupon->discounted_amount * 100)),
-							200,
-							array('X-Bolt-Cached-Value' => false)
-						));
+								"discount_amount" => (int)round($coupon->discounted_amount * 100)
+						);
 
 					}
 
@@ -115,69 +117,37 @@ class Bolt_Discounts_Helper
 				try {
 					$checkout->add_coupon($discount_code);
 				} catch (Exception $e) {
-					BoltLogger::write("BC API EXEPTION " . $e->getCode() . ") " . $e->getMessage());
+					BoltLogger::write("BC API EXCEPTION " . $e->getCode() . ") " . $e->getMessage());
 					if (400 == $e->getCode()) {
 						throw new Exception($e->getMessage(), SELF::E_BOLT_ITEMS_NOT_ELIGIBLE);
 					}
 				}
-				$coupon = $checkout->get()->data->cart->coupons[$old_coupons_qty];
+				$coupon = $checkout->get(true)->data->cart->coupons[$old_coupons_qty];
+				BoltLogger::write("checkout after add_coupon".var_export($checkout->get(),true));
 				BoltLogger::write("old_coupons_qty=$old_coupons_qty");
 				BoltLogger::write("coupon" . print_r($coupon, true));
 				$discounted_amount = isset($coupon->discounted_amount) ? (int)round($coupon->discounted_amount * 100) : 0;
 				if (0 == $discounted_amount) {
 					throw new Exception("error", SELF::E_BOLT_ITEMS_NOT_ELIGIBLE);
 				}
-				return set_version_headers(new WP_REST_Response(
-					(object)array(
+				return array(
 						"status" => "success",
 						"discount_code" => $discount_code,
 						"description" => $coupon_name,
 						"discount_type" => "fixed_amount",
-						"discount_amount" => (int)round($coupon->discounted_amount * 100)),
-					200,
-					array('X-Bolt-Cached-Value' => false)
-				));
+						"discount_amount" => (int)round($coupon->discounted_amount * 100)
+				);
 			}
 			throw new Exception("Invalid coupon code", SELF::E_BOLT_CODE_INVALID );
-			/*
-			//try use $discount_code as gift_code
-			$gift_info = BCClient::getCollection("/v2/gift_certificates?code=" . urlencode($discount_code));
-			BoltLogger::write("gift_info " . print_r($gift_info, true));
-			if (isset($gift_info[0]->id)) {
-				if ("active" <> $gift_info[0]->status) {
-					throw new Exception("Gift sertificate isn't active", SELF::E_BOLT_CODE_NOT_AVAILABLE);
-				}
-				if (0 == $gift_info[0]->balance) {
-					throw new Exception("Gift sertificate limit reached", SELF::E_BOLT_CODE_LIMIT_REACHED);
-				}
-
-				try {
-					$checkout->add_gift($discount_code);
-					exit;
-				} catch (Exception $e) {
-					BoltLogger::write("BC API EXCEPTION " . $e->getCode() . ") " . $e->getMessage());
-					if (400 == $e->getCode()) {
-						throw new Exception($e->getMessage(), SELF::E_BOLT_ITEMS_NOT_ELIGIBLE);
-					}
-				}
-
-			}
-			*/
-
-			exit;
 		} catch (Exception $e) {
 			BoltLogger::write("error(" . $e->getCode() . ") " . $e->getMessage());
-			return set_version_headers(new WP_REST_Response(
-				array(
+			return array(
 					'status' => 'error',
 					'error' => array(
 						'code' => (int)$e->getCode(),
 						'message' => $e->getMessage(),
 					),
-				),
-				422,
-				array('X-Bolt-Cached-Value' => false)
-			));
+			);
 		}
 	}
 }

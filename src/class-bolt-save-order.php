@@ -18,7 +18,7 @@ class Bolt_Save_Order
 		$this->confirmation_page = New Bolt_Confirmation_Page();
 	}
 
-	private function getorder() {
+	protected function getorder() {
 		if ( !isset( $this->order ) ) {
 			$this->order = BCClient::getCollection( "/v2/orders/{$this->order_id}" );
 			if (!$this->order) {
@@ -141,10 +141,10 @@ class Bolt_Save_Order
 		} elseif ( 'rejected_reversible' === $bolt_data->type ) {
 			$query['status_id'] = 12; // Manual Verification Required
 			$query['payment_provider_id'] = $bolt_data->id;
+			$query['payment_method'] = 'Bolt';
 			$message = 'rejected_reversible';
 			$this->transaction_reference = $bolt_data->reference;
 			$this->add_rejected_reversible_note();
-
 			// rejected_irreversible a transaction was rejected and decision can not be overridden.
 		} elseif ( 'rejected_irreversible' === $bolt_data->type ) {
 			$query['status_id'] = 6; // Declined
@@ -155,13 +155,16 @@ class Bolt_Save_Order
 			BugsnagHelper::getBugsnag()->notifyException( new Exception("Unknown transaction type {$bolt_data->type}".print_r($bolt_data,true)));
 		}
 		if ( $query  ) {
-			BoltLogger::write( "Order {$this->order_id} query " . print_r($query,true) );
-			$result = BCClient::updateResource( "/v2/orders/{$this->order_id}", $query );
-			if (!$result) {
-				BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't update order" ) );
-			}
+			$this->order_update($query);
 		}
 		return $message;
+	}
+	protected function order_update($query) {
+		BoltLogger::write( "Order {$this->order_id} query " . print_r($query,true) );
+		$result = BCClient::updateResource( "/v2/orders/{$this->order_id}", $query );
+		if (!$result) {
+			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't update order" ) );
+		}
 	}
 
 	protected function get_bolt_client() {
@@ -312,7 +315,7 @@ class Bolt_Save_Order
 		return $this->getorder()->staff_notes;
 	}
 
-	private function delete_rejected_reversible_note() {
+	protected function delete_rejected_reversible_note() {
 		if ( $this->rejection_note_text() == $this->get_staff_note()) {
 			$this->set_staff_note( '' );
 			BoltLogger::write("STAFF_NOTE DELETE");
@@ -322,7 +325,7 @@ class Bolt_Save_Order
 
 	}
 
-	private function add_rejected_reversible_note() {
+	protected function add_rejected_reversible_note() {
 		if ( '' == $this->get_staff_note()) {
 			$this->set_staff_note( $this->rejection_note_text() );
 			BoltLogger::write("STAFF_NOTE SET");
