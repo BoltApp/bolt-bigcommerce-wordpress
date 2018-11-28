@@ -19,7 +19,7 @@ php:
   - 7.1
 
 env:
-  - WP_VERSION=latest WP_MULTISITE=0  WC_VERSION=latest
+  - WP_VERSION=latest WP_MULTISITE=0
 
 
 before_script:
