@@ -1,4 +1,5 @@
 <?php
+namespace BoltBigcommerce;
 
 if ( !defined( 'ABSPATH' ) ) {
 	exit;
@@ -82,7 +83,7 @@ class Bolt_Generate_Order_Token
 			}
 		}
 		if (!$item_for_delete) {
-			BugsnagHelper::getBugsnag()->notifyException(new Exception("Can't find item after adding"));
+			BugsnagHelper::getBugsnag()->notifyException(new \Exception("Can't find item after adding"));
 		}
 		//$this->cart()->get_cart_id() can return old value https://github.com/bigcommerce/bigcommerce-for-wordpress/issues/112
 		$cart_id = $response["cart_id"];
@@ -266,7 +267,7 @@ JAVASCRIPT;
 			print_r( $response );
 			print_r( $cartData );
 			print_r( $bigcommerce_cart );
-			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Bolt Order token doesn't create" ) );
+			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Bolt Order token doesn't create" ) );
 			exit;
 		}
 
@@ -291,7 +292,7 @@ JAVASCRIPT;
 		BoltLogger::write( "bolt_generate_cart_data from " . print_r( $bigcommerce_cart, true ) );
 		BoltLogger::write( "bolt_generate_cart_data from " . json_encode( $bigcommerce_cart) );
 
-		$currency_code = get_option( BigCommerce\Settings\Sections\Currency::CURRENCY_CODE, '' );
+		$currency_code = get_option( \BigCommerce\Settings\Sections\Currency::CURRENCY_CODE, '' );
 
 		$tax_amount = isset($bigcommerce_cart["tax_amount"]["raw"]) ? $bigcommerce_cart["tax_amount"]["raw"] * 100 : 0;
 		$discount_amount = isset($bigcommerce_cart["discount_amount"]["raw"]) ? $bigcommerce_cart["discount_amount"]["raw"] * 100 : 0;

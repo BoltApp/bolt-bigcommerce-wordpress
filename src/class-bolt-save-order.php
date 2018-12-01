@@ -1,4 +1,5 @@
 <?php
+namespace BoltBigcommerce;
 
 if ( !defined( 'ABSPATH' ) ) {
 	exit;
@@ -22,7 +23,7 @@ class Bolt_Save_Order
 		if ( !isset( $this->order ) ) {
 			$this->order = BCClient::getCollection( "/v2/orders/{$this->order_id}" );
 			if (!$this->order) {
-				BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't get order" ) );
+				BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't get order" ) );
 			}
 		}
 		return $this->order;
@@ -65,7 +66,7 @@ class Bolt_Save_Order
 		BoltLogger::write( print_r( $bolt_data, true ) );
 
 		if ( !$signatureVerifier->verifySignature( $bolt_data_json, $hmacHeader ) ) {
-			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Failed HMAC Authentication" ) );
+			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Failed HMAC Authentication" ) );
 		}
 
 
@@ -117,7 +118,9 @@ class Bolt_Save_Order
 			$query['payment_method'] = 'Bolt';
 			$query['payment_provider_id'] = $bolt_data->id;
 			$message = $bolt_data->type;
-			$this->transaction_reference = $bolt_data->reference;
+			if (isset($bolt_data->reference)) {
+				$this->transaction_reference = $bolt_data->reference;
+			}
 			$this->delete_rejected_reversible_note();
 		// credit a credit/refund was issued
 		} elseif ( 'credit' === $bolt_data->type ) {
@@ -143,16 +146,20 @@ class Bolt_Save_Order
 			$query['payment_provider_id'] = $bolt_data->id;
 			$query['payment_method'] = 'Bolt';
 			$message = 'rejected_reversible';
-			$this->transaction_reference = $bolt_data->reference;
+			if (isset($bolt_data->reference)) {
+				$this->transaction_reference = $bolt_data->reference;
+			}
 			$this->add_rejected_reversible_note();
 			// rejected_irreversible a transaction was rejected and decision can not be overridden.
 		} elseif ( 'rejected_irreversible' === $bolt_data->type ) {
 			$query['status_id'] = 6; // Declined
 			$message = 'rejected_irreversible';
-			$this->transaction_reference = $bolt_data->reference;
+			if (isset($bolt_data->reference)) {
+				$this->transaction_reference = $bolt_data->reference;
+			}
 			$this->delete_rejected_reversible_note();
 		} else {
-			BugsnagHelper::getBugsnag()->notifyException( new Exception("Unknown transaction type {$bolt_data->type}".print_r($bolt_data,true)));
+			BugsnagHelper::getBugsnag()->notifyException( new \Exception("Unknown transaction type {$bolt_data->type}".print_r($bolt_data,true)));
 		}
 		if ( $query  ) {
 			$this->order_update($query);
@@ -163,7 +170,7 @@ class Bolt_Save_Order
 		BoltLogger::write( "Order {$this->order_id} query " . print_r($query,true) );
 		$result = BCClient::updateResource( "/v2/orders/{$this->order_id}", $query );
 		if (!$result) {
-			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't update order" ) );
+			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't update order" ) );
 		}
 	}
 
@@ -222,7 +229,7 @@ class Bolt_Save_Order
 
 		$bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
 		if (!$bigcommerce_cart_id) {
-			BugsnagHelper::getBugsnag()->notifyException(new Exception("Can't read bigcommerce_cart_id for " .$order_reference ) );
+			BugsnagHelper::getBugsnag()->notifyException(new \Exception("Can't read bigcommerce_cart_id for " .$order_reference ) );
 			return false;
 		}
 
@@ -344,7 +351,7 @@ class Bolt_Save_Order
 	{
 		BoltLogger::write( "start clean_up_archaic_resources_async" );
 		if ( !function_exists( 'stream_socket_client' ) ) {
-			BugsnagHelper::getBugsnag()->notifyException( new Exception( "This merchant does not appear to have streamed socket support enabled for resource cleanup.  Please enable this on their server." ) );
+			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "This merchant does not appear to have streamed socket support enabled for resource cleanup.  Please enable this on their server." ) );
 			return;
 		}
 
@@ -375,7 +382,7 @@ class Bolt_Save_Order
 
 		if ( !$fp ) {
 			BoltLogger::write( "Error connecting to clean Bolt resources. $errstr ($errno)\n" );
-			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Error connecting to clean Bolt resources. $errstr ($errno)\n" ) );
+			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Error connecting to clean Bolt resources. $errstr ($errno)\n" ) );
 		} else {
 			$out = "POST /wp-admin/admin-ajax.php?action=bolt_clean_up_resources HTTP/1.1\r\n";
 			$out .= "Host: $host\r\n";

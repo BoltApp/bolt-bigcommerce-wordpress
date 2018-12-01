@@ -1,4 +1,5 @@
 <?php
+namespace BoltBigcommerce;
 
 if ( !defined( 'ABSPATH' ) ) {
 	exit;
@@ -70,7 +71,7 @@ class Bolt_Confirmation_Page
 			'page',
 			$content_like
 		) );
-		return (int)$post_ids[0];
+		return isset($post_ids[0]) ? (int)$post_ids[0] : 0;
 	}
 
 	/**
@@ -91,7 +92,7 @@ class Bolt_Confirmation_Page
 		);
 		$post_id = wp_insert_post( $args );
 		if (!$post_id) {
-			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't create page" ) );
+			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't create page" ) );
 		}
 
 		return $post_id;
