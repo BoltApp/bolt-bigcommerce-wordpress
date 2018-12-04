@@ -1,6 +1,7 @@
 <?php
+namespace BoltBigcommerce;
 
-class BoltSaveOrderTest extends WP_UnitTestCase
+class BoltSaveOrderTest extends \WP_UnitTestCase
 {
 	/**
 	 * @dataProvider CreateOrderProvider
@@ -8,7 +9,7 @@ class BoltSaveOrderTest extends WP_UnitTestCase
 
 	public function test_CreateOrder_JsonCall_CallCheckoutMethodsSetShippingOptionAndCreateOrder($bolt_reference, $order_reference, $bolt_data, $is_json)
 	{
-		$mock_checkout = $this->getMockBuilder('Bolt_Checkout')
+		$mock_checkout = $this->getMockBuilder('BoltBigcommerce\Bolt_Checkout')
 			->disableOriginalConstructor()
 			->setMethods(array('set_shipping_option','create_order','delete'))
 			->getMock();
@@ -24,7 +25,7 @@ class BoltSaveOrderTest extends WP_UnitTestCase
 
 		update_option( "bolt_cart_id_" . $order_reference, array('cart_id' => true ) );
 
-		$bolt_save_order = $this->getMockBuilder('Bolt_Save_Order')
+		$bolt_save_order = $this->getMockBuilder('BoltBigcommerce\Bolt_Save_Order')
 			->setMethods(array('get_checkout_api', 'update_order'))
 			->getMock();
 		$bolt_save_order->expects($this->any())
@@ -228,7 +229,7 @@ class BoltSaveOrderTest extends WP_UnitTestCase
 	}
 
 	public function MockForSetOrderStatus($order) {
-		$bolt_save_order = $this->getMockBuilder('Bolt_Save_Order')
+		$bolt_save_order = $this->getMockBuilder('BoltBigcommerce\Bolt_Save_Order')
 			->setMethods(array('getorder','add_rejected_reversible_note','delete_rejected_reversible_note','order_update'))
 			->getMock();
 

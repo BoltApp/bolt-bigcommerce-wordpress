@@ -1,4 +1,5 @@
 <?php
+namespace BoltBigcommerce;
 
 require_once(plugin_dir_path( __FILE__ ) . "../lib/Bugsnag/Autoload.php");
 
@@ -47,7 +48,7 @@ class BugsnagHelper
 	public static function initBugsnag()
 	{
 		if ( !static::$bugsnag ) {
-			$bugsnag = new Bugsnag_Client( static::$apiKey );
+			$bugsnag = new \Bugsnag_Client( static::$apiKey );
 
 			$bugsnag->setErrorReportingLevel( E_ERROR );
 			$bugsnag->setAppVersion( BOLT_BIGCOMMERCE_VERSION );

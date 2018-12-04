@@ -1,4 +1,5 @@
 <?php
+namespace BoltBigcommerce;
 
 if ( !defined( 'ABSPATH' ) ) {
 	exit;
@@ -40,37 +41,46 @@ class Bolt_Generate_Order_Token
 	public function ajax_bolt_create_single_order() {
 		BoltLogger::write( "create_single_order POST" . print_r( $_POST, true ) );
 
-
-
 		//we have post_id. Calculate product_id on Bigcommerce
-		$product    = new BigCommerce\Post_Types\Product\Product( $_POST['post_id'] );
+		$product    = new \BigCommerce\Post_Types\Product\Product( $_POST['post_id'] );
 		$product_id = $product->bc_id();
+		//$variant_id = $this->get_variant_id( $product, $_POST );
 
 		BoltLogger::write("cart_id before start".$_COOKIE['bigcommerce_cart_id']);
-		//get current cart
+		//we want to create a new bigcommerce cart and save old
 
-
-		//$variant_id = $this->get_variant_id( $product, $_POST );
+        $old_bigcommerce_cart_id = $_COOKIE['bigcommerce_cart_id'];
+        $_COOKIE['bigcommerce_cart_id'] = '';
 
 		//add product to cart
 		//TODO as well as woocommerce if product was added to cart AFTER product page generation it doesn't appear in Bolt cart
 		$quantity = array_key_exists( 'quantity', $_POST ) ? absint( $_POST[ 'quantity' ] ) : 1;
 		$options = array();
 		$modifiers = array();
-		BoltLogger::write("cart_id before add_line_item".$_COOKIE['bigcommerce_cart_id']);
 		$cart = $this->cart()->add_line_item( $product_id, $options, $quantity, $modifiers );
+		//var_dump($cart); exit;
 		BoltLogger::write("cart_id before after_line_item".$_COOKIE['bigcommerce_cart_id']);
+		BoltLogger::write("cart_id before add_line_item".print_r($cart,true));
+
 		//TODO IF error and products didn't add
 
 		//map API ANSWER TO usual format
-		$mapper   = new BigCommerce\Cart\Cart_Mapper( $cart );
+		$mapper   = new \BigCommerce\Cart\Cart_Mapper( $cart );
 		$response = $mapper->map();
 
 		//create bolt cart and prepare JS script
-		$js_script = $this->bolt_create_order_and_generate_button_code($response);
+		$js_script = $this->generate_single_order_button_code($response);
+
+		//restore old cart
+		$_COOKIE['bigcommerce_cart_id'] = $old_bigcommerce_cart_id;
+		$cookie_life = apply_filters( 'bigcommerce/cart/cookie_lifetime', 30 * DAY_IN_SECONDS );
+		$secure      = ( 'https' === parse_url( home_url(), PHP_URL_SCHEME ) );
+		$cookie_result = setcookie( 'bigcommerce_cart_id', $old_bigcommerce_cart_id, time() + $cookie_life, COOKIEPATH, COOKIE_DOMAIN, $secure );
+		BoltLogger::write("{$cookie_result} = setcookie( bigcommerce_cart_id, {$old_bigcommerce_cart_id}, time() + ".$cookie_life.", ".COOKIEPATH.", ".COOKIE_DOMAIN.", $secure );");
+
 
 		//remove product from cart
-
+		/*
 		//search necessary row
 		$item_for_delete = null;
 		foreach ($response["items"] as $item_id => $item) {
@@ -82,7 +92,7 @@ class Bolt_Generate_Order_Token
 			}
 		}
 		if (!$item_for_delete) {
-			BugsnagHelper::getBugsnag()->notifyException(new Exception("Can't find item after adding"));
+			BugsnagHelper::getBugsnag()->notifyException(new \Exception("Can't find item after adding"));
 		}
 		//$this->cart()->get_cart_id() can return old value https://github.com/bigcommerce/bigcommerce-for-wordpress/issues/112
 		$cart_id = $response["cart_id"];
@@ -107,21 +117,45 @@ class Bolt_Generate_Order_Token
 			'modifiers' => $modifiers,
 			'customer_id' => $cart->getCustomerId()
 		));
+*/
 
 		exit;
 	}
 
+	public function generate_single_order_button_code($response) {
+		$data = $this->bolt_generate_cart_data($response);
+		$cart = $data['cart'];
+?>
+console.log(BoltCheckout.configureProductCheckout(
+	{
+		currency: "<?= $cart['currency']?>",
+		total: <?= $cart['total_amount']/100;?>,
+		items: [{
+			reference: "<?= $cart['items'][0]['reference']?>",
+			price: <?= $cart['items'][0]['unit_price']/100;?>,
+			quantity: <?= $cart['items'][0]['quantity']?>,
+			name: "<?= $cart['items'][0]['name']?>"
+		}],
+	},
+    {},
+    {},
+    { checkoutButtonClassName: "bolt-checkout-button" }));
+<?php
+}
 
 	public function change_bigcommerce_add_to_cart_button($button,$post_id) {
 		if ($this->on_product_archive) {
 			//call from category page
 			return $button;
 		}
+		return $button;
+		//TODO rename
+		$this->on_product_archive = true;
 
 		$result = \BoltPay\Helper::renderBoltTrackScriptTag();
 		$result .= \BoltPay\Helper::renderBoltConnectScriptTag();
 
-		$result .= <<<JAVASCRIPT
+        $result .= <<<JAVASCRIPT
 		<div class="bolt-checkout-button bolt-multi-step-checkout with-cards" style=""></div>
 		<script id="single-bolt-script-data" type="text/javascript">
 		 jQuery( document ).ready(function() {
@@ -266,7 +300,7 @@ JAVASCRIPT;
 			print_r( $response );
 			print_r( $cartData );
 			print_r( $bigcommerce_cart );
-			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Bolt Order token doesn't create" ) );
+			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Bolt Order token doesn't create" ) );
 			exit;
 		}
 
@@ -291,7 +325,7 @@ JAVASCRIPT;
 		BoltLogger::write( "bolt_generate_cart_data from " . print_r( $bigcommerce_cart, true ) );
 		BoltLogger::write( "bolt_generate_cart_data from " . json_encode( $bigcommerce_cart) );
 
-		$currency_code = get_option( BigCommerce\Settings\Sections\Currency::CURRENCY_CODE, '' );
+		$currency_code = get_option( \BigCommerce\Settings\Sections\Currency::CURRENCY_CODE, '' );
 
 		$tax_amount = isset($bigcommerce_cart["tax_amount"]["raw"]) ? $bigcommerce_cart["tax_amount"]["raw"] * 100 : 0;
 		$discount_amount = isset($bigcommerce_cart["discount_amount"]["raw"]) ? $bigcommerce_cart["discount_amount"]["raw"] * 100 : 0;

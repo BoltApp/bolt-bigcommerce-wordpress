@@ -1,7 +1,9 @@
 <?php
+namespace BoltBigcommerce;
+
 include_once("class-bolt-example-data.php");
 
-class BoltDiscountsHelperTest extends WP_UnitTestCase
+class BoltDiscountsHelperTest extends \WP_UnitTestCase
 {
 	const E_BOLT_INSUFFICIENT_INFORMATION = 6200;
 	const E_BOLT_CODE_INVALID = 6201;
@@ -26,7 +28,7 @@ class BoltDiscountsHelperTest extends WP_UnitTestCase
 		$data = New BoltExampleData();
 		$order_reference = $data->get_coupon_request()->cart->order_reference;
 		update_option( "bolt_cart_id_" . $order_reference, array('cart_id' => true ) );
-			$discount_helper = $this->getMockBuilder('Bolt_Discounts_Helper')
+			$discount_helper = $this->getMockBuilder('BoltBigcommerce\Bolt_Discounts_Helper')
 			->setConstructorArgs(array($data->get_coupon_request()))
 			->setMethods(array('coupon_info'))
 			->getMock();
@@ -44,13 +46,13 @@ class BoltDiscountsHelperTest extends WP_UnitTestCase
 		$order_reference = $data->get_coupon_request()->cart->order_reference;
 		update_option("bolt_cart_id_" . $order_reference, array('cart_id' => true));
 
-		$stub_checkout_api = $this->getMockBuilder('Bolt_Checkout')
+		$stub_checkout_api = $this->getMockBuilder('BoltBigcommerce\Bolt_Checkout')
 			->disableOriginalConstructor()
 			->setMethods(array('get'))
 			->getMock();
 		$stub_checkout_api->method('get')->willReturn($data->get_checkout_with_coupon_applied());
 
-		$discount_helper = $this->getMockBuilder('Bolt_Discounts_Helper')
+		$discount_helper = $this->getMockBuilder('BoltBigcommerce\Bolt_Discounts_Helper')
 			->setConstructorArgs(array($data->get_coupon_request()))
 			->setMethods(array('get_coupon_info', 'get_checkout_api'))
 			->getMock();
@@ -72,7 +74,7 @@ class BoltDiscountsHelperTest extends WP_UnitTestCase
 		$order_reference = $data->get_coupon_request()->cart->order_reference;
 		update_option("bolt_cart_id_" . $order_reference, array('cart_id' => true));
 
-		$stub_checkout_api = $this->getMockBuilder('Bolt_Checkout')
+		$stub_checkout_api = $this->getMockBuilder('BoltBigcommerce\Bolt_Checkout')
 			->disableOriginalConstructor()
 			->setMethods(array('get'))
 			->getMock();
@@ -89,7 +91,7 @@ class BoltDiscountsHelperTest extends WP_UnitTestCase
 				}
 			}));
 
-		$discount_helper = $this->getMockBuilder('Bolt_Discounts_Helper')
+		$discount_helper = $this->getMockBuilder('BoltBigcommerce\Bolt_Discounts_Helper')
 			->setConstructorArgs(array($data->get_coupon_request()))
 			->setMethods(array('get_coupon_info', 'get_checkout_api'))
 			->getMock();

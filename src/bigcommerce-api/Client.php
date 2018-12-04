@@ -1,4 +1,5 @@
 <?php
+namespace BoltBigcommerce;
 
 /**
  * Bigcommerce API Client.

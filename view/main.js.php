@@ -68,7 +68,9 @@
             location.href = redirect_url;
         }
     };
-    BoltCheckout.configure(cart, hints, callbacks);
+    jQuery(window).load(function() {
+        BoltCheckout.configure(cart, hints, callbacks);
+    });
     //cart update event.
     jQuery(document).on('updated_cart_totals',function(){
         // Re-navigate to the same page with a fresh session to avoid repeating the last action 

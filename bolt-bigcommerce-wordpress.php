@@ -1,4 +1,5 @@
 <?php
+namespace BoltBigcommerce;
 /**
  * Bolt Checkout for BigCommerce for Wordpress.
  *
@@ -14,7 +15,7 @@
  * License URI:       http://www.gnu.org/licenses/gpl-3.0.txt
  */
 
-const BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH = 'bigcommerce-for-wordpress/bigcommerce.php';
+define( 'BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH', 'bigcommerce-for-wordpress/bigcommerce.php' );
 if ( !defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -60,8 +61,3 @@ if ( in_array( BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH, apply_filters( 'active_plugi
 
 	$bolt_bigcommerce->init();
 }
- 
- 
-
-
-

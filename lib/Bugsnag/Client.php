@@ -36,7 +36,7 @@ class Bugsnag_Client
     {
         // Check API key has been passed
         if (!is_string($apiKey)) {
-            throw new Exception('Bugsnag Error: Invalid API key');
+            throw new \Exception('Bugsnag Error: Invalid API key');
         }
 
         // Create a configuration object
