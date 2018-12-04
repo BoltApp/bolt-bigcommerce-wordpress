@@ -416,22 +416,26 @@ JAVASCRIPT;
 		if ( 0 == $current_user->ID ) {
 			return "{}";
 		} else {
+			$prefill = array();
 			//get user address from Bigcommperce by API
 			$bc_customer_id = get_user_option( 'bigcommerce_customer_id', $current_user->ID );
 			if ( $bc_customer_id ) {
-				$addresses = BCClient::getCollection( "/v2/customers/{$bc_customer_id}/addresses" );
-				$prefill = $this->copy_object_to_array( $addresses[0], array(
-					"first_name" => "firstName",
-					"last_name" => "addressLine1",
-					"street_1" => "addressLine1",
-					"street_2" => "addressLine2",
-					"city" => "city",
-					"state" => "state",
-					"zip" => "zip",
-					"country_iso2" => "country",
-					"phone" => "phone" ) );
-			} else {
-				$prefill = array();
+				try {
+					$addresses = BCClient::getCollection( "/v2/customers/{$bc_customer_id}/addresses" );
+					$prefill = $this->copy_object_to_array( $addresses[0], array(
+						"first_name" => "firstName",
+						"last_name" => "addressLine1",
+						"street_1" => "addressLine1",
+						"street_2" => "addressLine2",
+						"city" => "city",
+						"state" => "state",
+						"zip" => "zip",
+						"country_iso2" => "country",
+						"phone" => "phone" ) );
+				} catch (Exception $ex){
+					//if addresses call returns 404 error
+					$prefill = array();
+				}
 			}
 			//if BC doesn't have information get name from Wordpress
 			if ( empty( $prefill ) ) {
