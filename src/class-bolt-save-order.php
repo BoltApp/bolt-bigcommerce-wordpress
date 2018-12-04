@@ -35,7 +35,7 @@ class Bolt_Save_Order
 	public function register_endpoints()
 	{
 		register_rest_route( 'bolt', '/response', array(
-			'methods' => WP_REST_Server::CREATABLE,
+			'methods' => \WP_REST_Server::CREATABLE,
 			'callback' => array( $this, 'handler_response' ),
 		) );
 	}

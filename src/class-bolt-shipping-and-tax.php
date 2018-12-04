@@ -29,7 +29,7 @@ class Bolt_Shipping_And_Tax
 	public function register_endpoints()
 	{
 		register_rest_route( 'bolt', '/shippingtax', array(
-			'methods' => WP_REST_Server::CREATABLE,
+			'methods' => \WP_REST_Server::CREATABLE,
 			'callback' => array( $this, 'handler_shipping_tax' ),
 		) );
 	}
@@ -115,7 +115,7 @@ class Bolt_Shipping_And_Tax
 			return false;
 		}
 
-		if (isset($bolt_cart_id_option['product'])) {
+		if ( isset($bolt_cart_id_option['product']) && $bolt_cart_id_option['product'] <> "" ) {
 			//need to add product to cart cos user in product page
 			$this->add_product_to_cart($bolt_cart_id_option);
 		}

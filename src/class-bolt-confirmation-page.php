@@ -27,7 +27,7 @@ class Bolt_Confirmation_Page
 			if ( empty( $order ) ) {
 				$controller = \BigCommerce\Templates\Order_Not_Found::factory([]);
 			} else {
-				$controller = \BigCommerce\Templates\Order_Details::factory( [ BigCommerce\Templates\Order_Details::ORDER => $order ] );
+				$controller = \BigCommerce\Templates\Order_Details::factory( [ \BigCommerce\Templates\Order_Details::ORDER => $order ] );
 			}
 			$result = $controller->render();
 		} else {
