@@ -1,4 +1,5 @@
 <?php
+namespace BoltBigcommerce;
 
 /**
  * HTTP connection.
@@ -287,7 +288,7 @@ class Connection
 		if ( $status >= 400 && $status <= 499 ) {
 			BoltLogger::write("status $status body title {$body->title} body ".$this->getBody());
 			if ( $this->failOnError ) {
-				throw new Exception( $body->title, $status );
+				throw new \Exception( $body->title, $status );
 			} else {
 				$this->lastError = $body;
 				return false;
@@ -295,7 +296,7 @@ class Connection
 		} elseif ( $status >= 500 && $status <= 599 ) {
 			BoltLogger::write("status $status");
 			if ( $this->failOnError ) {
-				throw new Exception( $body, $status );
+				throw new \Exception( $body, $status );
 			} else {
 				$this->lastError = $body;
 				return false;

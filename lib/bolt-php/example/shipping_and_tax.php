@@ -11,7 +11,7 @@ $signatureVerifier = new \BoltPay\SignatureVerifier(
 $requestJson = file_get_contents('php://input');
 
 if (!$signatureVerifier->verifySignature($requestJson, $hmacHeader)) {
-    throw new Exception("Failed HMAC Authentication");
+    throw new \Exception("Failed HMAC Authentication");
 }
 
 $exampleData = new \BoltPay\Example\Data();

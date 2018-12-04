@@ -19,6 +19,26 @@ singlePayProcess = function () {
     var post_id = url_array[url_array.length - 1];
     var quantity = cart_form.find( '[name=quantity]' ).val()
     var variance_id = (cart_form.find( '[name=variant_id]' ).length) ? cart_form.find( '[name=variant_id]' ).val() : '';
+/*
+        BoltCheckout.configureProductCheckout(
+            {
+                currency: "USD",
+                total: 20,
+                items: [{
+                    reference: "113",
+                    price: 20,
+                    quantity: 1,
+                    name: "simple test product"
+                }],
+            },
+            {},
+            {},
+            { checkoutButtonClassName: "bolt-product-buy" });
+        jQuery( '.bc-product-form' ).unblock();
+        isRequestInFlight = false;*/
+
+
+
 
     jQuery.ajax( {
         type: 'POST',

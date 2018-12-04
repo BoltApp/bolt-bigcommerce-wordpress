@@ -1,23 +1,21 @@
 <?php
+namespace BoltBigcommerce;
 
-
-
-
-class BoltGenerateOrderTokenTest extends WP_UnitTestCase {
+class BoltGenerateOrderTokenTest extends \WP_UnitTestCase {
 	//TODO: move to different files
 	public function test_constants_defined() {
 		$this->assertTrue( defined( 'BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH' ) );
 		$this->assertTrue( defined( 'BOLT_BIGCOMMERCE_VERSION' ) );
 		$this->assertTrue( defined( 'BIGCOMMERCE_VERSION' ) );
-		$this->assertTrue( defined( 'Bolt_Discounts_Helper::E_BOLT_INSUFFICIENT_INFORMATION' ) );
-		$this->assertTrue( defined( 'Bolt_Discounts_Helper::E_BOLT_CODE_INVALID' ) );
-		$this->assertTrue( defined( 'Bolt_Discounts_Helper::E_BOLT_CODE_EXPIRED' ) );
-		$this->assertTrue( defined( 'Bolt_Discounts_Helper::E_BOLT_CODE_NOT_AVAILABLE' ) );
-		$this->assertTrue( defined( 'Bolt_Discounts_Helper::E_BOLT_CODE_LIMIT_REACHED' ) );
-		$this->assertTrue( defined( 'Bolt_Discounts_Helper::E_BOLT_MINIMUM_CART_AMOUNT_REQUIRED' ) );
-		$this->assertTrue( defined( 'Bolt_Discounts_Helper::E_BOLT_UNIQUE_EMAIL_REQUIRED' ) );
-		$this->assertTrue( defined( 'Bolt_Discounts_Helper::E_BOLT_ITEMS_NOT_ELIGIBLE' ) );
-		$this->assertTrue( defined( 'Bolt_Discounts_Helper::E_BOLT_SERVICE' ) );
+		$this->assertTrue( defined( 'BoltBigcommerce\Bolt_Discounts_Helper::E_BOLT_INSUFFICIENT_INFORMATION' ) );
+		$this->assertTrue( defined( 'BoltBigcommerce\Bolt_Discounts_Helper::E_BOLT_CODE_INVALID' ) );
+		$this->assertTrue( defined( 'BoltBigcommerce\Bolt_Discounts_Helper::E_BOLT_CODE_EXPIRED' ) );
+		$this->assertTrue( defined( 'BoltBigcommerce\Bolt_Discounts_Helper::E_BOLT_CODE_NOT_AVAILABLE' ) );
+		$this->assertTrue( defined( 'BoltBigcommerce\Bolt_Discounts_Helper::E_BOLT_CODE_LIMIT_REACHED' ) );
+		$this->assertTrue( defined( 'BoltBigcommerce\Bolt_Discounts_Helper::E_BOLT_MINIMUM_CART_AMOUNT_REQUIRED' ) );
+		$this->assertTrue( defined( 'BoltBigcommerce\Bolt_Discounts_Helper::E_BOLT_UNIQUE_EMAIL_REQUIRED' ) );
+		$this->assertTrue( defined( 'BoltBigcommerce\Bolt_Discounts_Helper::E_BOLT_ITEMS_NOT_ELIGIBLE' ) );
+		$this->assertTrue( defined( 'BoltBigcommerce\Bolt_Discounts_Helper::E_BOLT_SERVICE' ) );
 	}
 
 
@@ -26,7 +24,7 @@ class BoltGenerateOrderTokenTest extends WP_UnitTestCase {
 	 */
 	public function test_GenerateCartData_CheckTotalAmountAndDiscount($result, $bigcommerce_cart) {
 		//don't want to check products availability in this test
-		$bolt_generate_order_token = $this->getMockBuilder('Bolt_Generate_Order_Token')
+		$bolt_generate_order_token = $this->getMockBuilder('BoltBigcommerce\Bolt_Generate_Order_Token')
 			->setMethods( array('check_products_availability') )
 			->getMock();
 		$bolt_generate_order_token -> expects( $this->any() )
@@ -37,7 +35,11 @@ class BoltGenerateOrderTokenTest extends WP_UnitTestCase {
 		$bolt_cart = $bolt_data['cart'];
 
 		//sum of products needs to be equal total_amount+discount-tax
-		$total_sum = $bolt_cart['total_amount'] - $bolt_cart['tax_amount'] + $bolt_cart['discounts'][0]['amount'];
+		$total_amount = isset($bolt_cart['total_amount']) ? $bolt_cart['total_amount'] : 0;
+		$tax_amount = isset($bolt_cart['tax_amount']) ? $bolt_cart['tax_amount'] : 0;
+		$discount = isset($bolt_cart['discounts'][0]['amount']) ? $bolt_cart['discounts'][0]['amount'] : 0;
+
+		$total_sum = $total_amount - $tax_amount + $discount;
 		$products_sum = 0;
 		foreach ( $bolt_cart["items"] as $item ) {
 			$products_sum += $item['total_amount'];
@@ -62,7 +64,7 @@ class BoltGenerateOrderTokenTest extends WP_UnitTestCase {
 	}
 
 	public function test_GenerateCatData_ProductIsnotAvailable_ReturnFalse () {
-		$bolt_generate_order_token = $this->getMockBuilder('Bolt_Generate_Order_Token')
+		$bolt_generate_order_token = $this->getMockBuilder('BoltBigcommerce\Bolt_Generate_Order_Token')
 			->setMethods( array('api_call_get_product') )
 			->getMock();
 		$bolt_generate_order_token -> expects( $this->any() )
@@ -87,7 +89,7 @@ class BoltGenerateOrderTokenTest extends WP_UnitTestCase {
 	}
 
 	public function test_GenerateCatData_ProductIsnotEnough_ReturnFalse () {
-		$bolt_generate_order_token = $this->getMockBuilder('Bolt_Generate_Order_Token')
+		$bolt_generate_order_token = $this->getMockBuilder('BoltBigcommerce\Bolt_Generate_Order_Token')
 			->setMethods( array('api_call_get_product') )
 			->getMock();
 		$bolt_generate_order_token -> expects( $this->any() )
@@ -110,7 +112,7 @@ class BoltGenerateOrderTokenTest extends WP_UnitTestCase {
 	}
 
 	public function test_GenerateCatData_ProductInStock_ReturnArray () {
-		$bolt_generate_order_token = $this->getMockBuilder('Bolt_Generate_Order_Token')
+		$bolt_generate_order_token = $this->getMockBuilder('BoltBigcommerce\Bolt_Generate_Order_Token')
 			->setMethods( array('api_call_get_product') )
 			->getMock();
 		$bolt_generate_order_token -> expects( $this->any() )

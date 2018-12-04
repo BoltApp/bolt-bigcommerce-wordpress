@@ -1,5 +1,7 @@
 <?php
-class BoltConfirmationPageTest extends WP_UnitTestCase
+namespace BoltBigcommerce;
+
+class BoltConfirmationPageTest extends \WP_UnitTestCase
 {
 	public function test_GetURL_PageNotExistsBefore_URLnonEmpty() {
 		$confirmation_page = new Bolt_Confirmation_Page();

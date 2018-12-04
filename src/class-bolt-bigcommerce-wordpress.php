@@ -1,4 +1,5 @@
 <?php
+namespace BoltBigcommerce;
 
 if ( !defined( 'ABSPATH' ) ) {
 	exit;

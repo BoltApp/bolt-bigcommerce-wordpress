@@ -1,8 +1,10 @@
 <?php
+namespace BoltBigcommerce;
 
 if ( !defined( 'ABSPATH' ) ) {
 	exit;
 }
+
 
 class Bolt_Shipping_And_Tax
 {
@@ -41,7 +43,7 @@ class Bolt_Shipping_And_Tax
 	 */
 	private function convert_bolt_address_to_bc( $bolt_address )
 	{
-		$bc_address = new stdClass();
+		$bc_address = new \stdClass();
 		$bc_address->first_name = $bolt_address->first_name;
 		$bc_address->last_name = $bolt_address->last_name;
 		//TODO ADD company from Bolt
@@ -79,7 +81,7 @@ class Bolt_Shipping_And_Tax
 		$bolt_order_json = file_get_contents('php://input');
 
 		if (!$signatureVerifier->verifySignature($bolt_order_json, $hmacHeader)) {
-			BugsnagHelper::getBugsnag()->notifyException(new Exception("Failed HMAC Authentication"));
+			BugsnagHelper::getBugsnag()->notifyException(new \Exception("Failed HMAC Authentication"));
 		}
 
 		$bolt_order = json_decode($bolt_order_json);
@@ -109,11 +111,11 @@ class Bolt_Shipping_And_Tax
 		BoltLogger::write( print_r($bolt_cart_id_option,true). " = get_option( \"bolt_cart_id_\" . {$bolt_order->cart->order_reference} )" );
 		$this->bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
 		if (!$this->bigcommerce_cart_id) {
-			BugsnagHelper::getBugsnag()->notifyException(new Exception("Can't read bigcommerce_cart_id for " .$bolt_order->cart->order_reference ) );
+			BugsnagHelper::getBugsnag()->notifyException(new \Exception("Can't read bigcommerce_cart_id for " .$bolt_order->cart->order_reference ) );
 			return false;
 		}
 
-		if ($bolt_cart_id_option['product']) {
+		if (isset($bolt_cart_id_option['product'])) {
 			//need to add product to cart cos user in product page
 			$this->add_product_to_cart($bolt_cart_id_option);
 		}
@@ -130,7 +132,7 @@ class Bolt_Shipping_And_Tax
 		//TODO test mixed cart (added before+button on cart page)
 		//TODO test for unregistered users
 
-		if (($bolt_cart_id_option["product"]['customer_id'])) {
+		if (isset($bolt_cart_id_option["product"]['customer_id'])) {
 			//change customer_id only if necessary
 			BoltLogger::write("change customer_id from '".$checkout->get()->data->cart->customer_id."' to '{$bolt_cart_id_option["product"]['customer_id']}'");
 			if ($checkout->get()->data->cart->customer_id <> $bolt_cart_id_option["product"]['customer_id']) {
@@ -142,7 +144,7 @@ class Bolt_Shipping_And_Tax
 		}
 
 		//Add or update consignment to Checkout
-		$consignment = new stdClass();
+		$consignment = new \stdClass();
 		//In Bolt  the shipping address is the same as the billing address
 		$consignment->shipping_address = $address;
 		//send all physical products to this address

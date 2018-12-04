@@ -1,7 +1,20 @@
 <?php
+namespace BoltBigcommerce;
+
 include_once("class-bolt-example-data.php");
-class BoltShippingAndTaxTest extends WP_UnitTestCase
+
+function file_get_contents($var) {
+	global $bolt_order;
+	return json_encode($bolt_order);
+}
+function wp_send_json($var) {
+
+}
+class BoltShippingAndTaxTest extends \WP_UnitTestCase
 {
+
+
+
 
 	public function test_EvaluateShippingTax_SimpleOrder_CheckCheckoutApiCalls()
 	{
@@ -13,7 +26,7 @@ class BoltShippingAndTaxTest extends WP_UnitTestCase
 
 		update_option("bolt_cart_id_" . $bolt_order->cart->order_reference, array('cart_id' => true));
 
-		$mock_checkout = $this->getMockBuilder('Bolt_Checkout')
+		$mock_checkout = $this->getMockBuilder('BoltBigcommerce\Bolt_Checkout')
 			->disableOriginalConstructor()
 			->setMethods(array('get', 'update_address', 'add_or_update_consignment'))
 			->getMock();
@@ -28,7 +41,7 @@ class BoltShippingAndTaxTest extends WP_UnitTestCase
 			->method('add_or_update_consignment')
 			->with($this->equalTo($add_or_update_consignment_input));
 
-		$bolt_shipping_and_tax = $this->getMockBuilder('Bolt_Shipping_And_Tax')
+		$bolt_shipping_and_tax = $this->getMockBuilder('BoltBigcommerce\Bolt_Shipping_And_Tax')
 			->setMethods(array('get_checkout_api'))
 			->getMock();
 
@@ -38,5 +51,27 @@ class BoltShippingAndTaxTest extends WP_UnitTestCase
 
 		$bolt_shipping_and_tax->evaluate_shipping_tax($bolt_order);
 	}
+
+	public function test_HandlerShippingTax_SimpleOrder_CallEvaluateShippingTaxWithRightParameter(){
+		global $bolt_order;
+		$data = new BoltExampleData();
+		$bolt_order = $data->get_shippingtax_request();
+
+		$bolt_shipping_and_tax = $this->getMockBuilder('BoltBigcommerce\Bolt_Shipping_And_Tax')
+			->setMethods(array('evaluate_shipping_tax'))
+			->getMock();
+		$bolt_shipping_and_tax->expects($this->once())
+			->method('evaluate_shipping_tax')
+			->with( $this->equalTo( $bolt_order ) )
+			->will( $this->returnValue(''));
+
+		$computedHmac = trim(base64_encode(hash_hmac('sha256', json_encode($bolt_order), \BoltPay\Bolt::$signingSecret, true)));
+		$_SERVER['HTTP_X_BOLT_HMAC_SHA256'] = $computedHmac;
+
+		$bolt_shipping_and_tax->handler_shipping_tax();
+	}
+
+
+
 }
 

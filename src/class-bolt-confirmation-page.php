@@ -1,4 +1,5 @@
 <?php
+namespace BoltBigcommerce;
 
 if ( !defined( 'ABSPATH' ) ) {
 	exit;
@@ -21,12 +22,12 @@ class Bolt_Confirmation_Page
 	{
 		if ( $_SESSION["bolt_order_id"] ) {
 			$order_id = $_SESSION["bolt_order_id"];
-			$customer = new BigCommerce\Accounts\Customer( get_current_user_id() );
+			$customer = new \BigCommerce\Accounts\Customer( get_current_user_id() );
 			$order    = $customer->get_order_details( $order_id );
 			if ( empty( $order ) ) {
-				$controller = BigCommerce\Templates\Order_Not_Found::factory([]);
+				$controller = \BigCommerce\Templates\Order_Not_Found::factory([]);
 			} else {
-				$controller = BigCommerce\Templates\Order_Details::factory( [ BigCommerce\Templates\Order_Details::ORDER => $order ] );
+				$controller = \BigCommerce\Templates\Order_Details::factory( [ BigCommerce\Templates\Order_Details::ORDER => $order ] );
 			}
 			$result = $controller->render();
 		} else {
@@ -70,7 +71,7 @@ class Bolt_Confirmation_Page
 			'page',
 			$content_like
 		) );
-		return (int)$post_ids[0];
+		return isset($post_ids[0]) ? (int)$post_ids[0] : 0;
 	}
 
 	/**
@@ -91,7 +92,7 @@ class Bolt_Confirmation_Page
 		);
 		$post_id = wp_insert_post( $args );
 		if (!$post_id) {
-			BugsnagHelper::getBugsnag()->notifyException( new Exception( "Can't create page" ) );
+			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't create page" ) );
 		}
 
 		return $post_id;

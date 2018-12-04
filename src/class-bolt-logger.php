@@ -1,5 +1,5 @@
 <?php
-
+namespace BoltBigcommerce;
 
 class BoltLogger
 {
