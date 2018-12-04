@@ -22,12 +22,12 @@ class Bolt_Confirmation_Page
 	{
 		if ( $_SESSION["bolt_order_id"] ) {
 			$order_id = $_SESSION["bolt_order_id"];
-			$customer = new BigCommerce\Accounts\Customer( get_current_user_id() );
+			$customer = new \BigCommerce\Accounts\Customer( get_current_user_id() );
 			$order    = $customer->get_order_details( $order_id );
 			if ( empty( $order ) ) {
-				$controller = BigCommerce\Templates\Order_Not_Found::factory([]);
+				$controller = \BigCommerce\Templates\Order_Not_Found::factory([]);
 			} else {
-				$controller = BigCommerce\Templates\Order_Details::factory( [ BigCommerce\Templates\Order_Details::ORDER => $order ] );
+				$controller = \BigCommerce\Templates\Order_Details::factory( [ BigCommerce\Templates\Order_Details::ORDER => $order ] );
 			}
 			$result = $controller->render();
 		} else {
