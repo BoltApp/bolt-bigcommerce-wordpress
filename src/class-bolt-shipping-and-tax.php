@@ -95,9 +95,6 @@ class Bolt_Shipping_And_Tax
 
 		BoltLogger::write( "response shipping options" . print_r( $shipping_and_tax_payload, true ) );
 
-		// Cache the shipping and tax response
-		update_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5, json_encode( $shipping_and_tax_payload ), false );
-
 		wp_send_json( $shipping_and_tax_payload );
 	}
 
@@ -179,8 +176,16 @@ class Bolt_Shipping_And_Tax
 			),
 			'shipping_options' => $bolt_shipping_options,
 		);
-
-		return $shipping_and_tax_payload;
+		if (empty($bolt_shipping_options)) {
+			BugsnagHelper::getBugsnag()->notifyError("notifyError",
+				"Bigcommerce doesn't have shipping options for this address",
+				array ( 'address' => $address )
+			);
+		} else {
+			// Cache the shipping and tax response
+			update_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5, json_encode($shipping_and_tax_payload ), false );
+  }
+ return $shipping_and_tax_payload;
 	}
 
 	private function add_product_to_cart($bolt_cart_id_option) {
