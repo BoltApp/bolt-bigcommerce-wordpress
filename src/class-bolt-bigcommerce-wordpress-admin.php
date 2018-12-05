@@ -61,7 +61,7 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 				'placeholder' => __( 'Enter Payment secret key', 'bolt-bigcommerce-wordpress' ),
 			),
 			'publishable_key' => array(
-				'title' => __( 'Publishable Key (Payment Only)', 'bolt-bigcommerce-wordpress' ),
+				'title' => __( 'Publishable Key', 'bolt-bigcommerce-wordpress' ),
 				'type' => 'text',
 				'description' => __( 'Embedded in your website and used to identify you as a merchant. Typically used on the checkout page.', 'bolt-bigcommerce-wordpress' ),
 				'default' => '',
@@ -79,7 +79,7 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 				'title'       => __( 'Payment action', 'bolt-bigcommerce-wordpress' ),
 				'type'        => 'select',
 				'class'       => 'wc-enhanced-select',
-				'description' => __( 'Choose whether you wish to capture funds immediately or authorize payment only.', 'bolt-bigcommerce-wordpress' ),
+				'description' => __( 'Choose whether you wish to capture funds immediately when Bolt approves order or authorize payment only.', 'bolt-bigcommerce-wordpress' ),
 				'default'     => 'true',
 				'desc_tip'    => true,
 				'options'     => array(
