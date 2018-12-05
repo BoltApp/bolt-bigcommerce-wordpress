@@ -115,7 +115,6 @@ class Bolt_Save_Order
 			} else {
 				$query['status_id'] = 11; // Awaiting Fulfillment
 			}
-			$query['payment_method'] = 'Bolt';
 			$query['payment_provider_id'] = $bolt_data->id;
 			$message = $bolt_data->type;
 			if (isset($bolt_data->reference)) {
@@ -144,7 +143,6 @@ class Bolt_Save_Order
 		} elseif ( 'rejected_reversible' === $bolt_data->type ) {
 			$query['status_id'] = 12; // Manual Verification Required
 			$query['payment_provider_id'] = $bolt_data->id;
-			$query['payment_method'] = 'Bolt';
 			$message = 'rejected_reversible';
 			if (isset($bolt_data->reference)) {
 				$this->transaction_reference = $bolt_data->reference;
@@ -270,7 +268,10 @@ class Bolt_Save_Order
 		//make order complete
 		$pending_status_id = 1; //TODO Get status id from BC
 		$body = array( "status_id" => $pending_status_id );
-		$this->update_order( $order_id, array( "status_id" => $pending_status_id ) );
+		$this->update_order( $order_id, array(
+			'status_id'      => $pending_status_id,
+			'payment_method' => 'Credit Card (Bolt)',
+		) );
 
 		//save Bigcommerce order id
 		add_option( "bolt_order_{$order_reference}", $order_id );
@@ -340,9 +341,6 @@ class Bolt_Save_Order
 			BoltLogger::write("STAFF_NOTE not set cos already set '".$this->get_staff_note()."''");
 		}
 	}
-
-
-
 
 	/**
 	 * Makes non-blocking call to URL endpoint for cleaning up expired order creation resources

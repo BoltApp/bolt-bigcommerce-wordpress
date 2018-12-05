@@ -257,9 +257,9 @@ class BoltSaveOrderTest extends \WP_UnitTestCase
 	public function OrderStatusDigitalProvider() {
 		return array(
 			'payment' => array( 'input' => (object)array('type'=>'payment','id'=>'id'),
-				                'result'=> array('status_id'=>10,'payment_method'=>'Bolt', 'payment_provider_id'=>'id' )),
+				                'result'=> array('status_id'=>10, 'payment_provider_id'=>'id' )),
 			'capture' => array( 'input' => (object)array('type'=>'capture','id'=>'id'),
-				                'result'=> array('status_id'=>10,'payment_method'=>'Bolt', 'payment_provider_id'=>'id' )),
+				                'result'=> array('status_id'=>10, 'payment_provider_id'=>'id' )),
 			'credit' => array( 'input' => (object)array('type'=>'credit','amount'=>1000),
 				               'result'=> array('status_id'=>4,'refunded_amount'=>10 )),
 			'void' => array( 'input' => (object)array('type'=>'void'),
@@ -269,7 +269,7 @@ class BoltSaveOrderTest extends \WP_UnitTestCase
 			'pending' => array( 'input' => (object)array('type'=>'pending','id'=>'id'),
 					            'result'=> array('status_id'=>12,'payment_provider_id'=>'id')),
 			'rejected_reversible' => array( 'input' => (object)array('type'=>'rejected_reversible','id'=>'id'),
-					                        'result'=> array('status_id'=>12,'payment_method'=>'Bolt', 'payment_provider_id'=>'id' )),
+					                        'result'=> array('status_id'=>12, 'payment_provider_id'=>'id' )),
 			'rejected_irreversible' => array( 'input' => (object)array('type'=>'rejected_irreversible'),
 				                              'result'=> array('status_id'=>6,)),
 
