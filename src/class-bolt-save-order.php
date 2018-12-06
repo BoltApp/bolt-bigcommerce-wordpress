@@ -78,6 +78,14 @@ class Bolt_Save_Order
 			return $bolt_discounts->apply_coupon_from_discount_hook();
 		}
 
+
+		if (!isset($bolt_data->reference) && isset($bolt_data->items)) {
+			// Create Cart for Product Page Checkout
+			BoltLogger::write("Create Cart for Product Page Checkout");
+			$bolt_page_checkout = new Bolt_Page_Checkout;
+			return $bolt_page_checkout->create_cart_from_api_call_and_send_it( $bolt_data );
+		}
+
 		//create new order
 		$result = $this->bolt_create_order( $bolt_data->reference, $bolt_data->order, $bolt_data );
 
@@ -183,13 +191,6 @@ class Bolt_Save_Order
 		return new Bolt_Checkout($bigcommerce_cart_id);
 	}
 
-	protected function update_order( $order_id, $body )
-	{
-		BoltLogger::write("Order {$order_id} UPDATE ORDER STATUS \"/v2/orders/{$order_id}\", " . json_encode($body));
-		BCClient::updateResource("/v2/orders/{$order_id}", $body);
-	}
-
-
 	/**
 	 * Create order in Bigcommerce
 	 *
@@ -263,24 +264,37 @@ class Bolt_Save_Order
 			$checkout->set_shipping_option($shipping_option_id);
 			BoltLogger::write("### bigcommerce_input[set_shipping_option] ". var_export($shipping_option_id, true ) );
 		}
-		$order_id = $checkout->create_order();
+		$customer_id = $checkout->get()->data->cart->customer_id;
+		BoltLogger::write("customer_id in cart is '{$customer_id}'");
+
+		$this->order_id = $checkout->create_order();
+
+		$body = array('payment_method' => 'Credit Card (Bolt)');
+
+		//set customer_id if it isn't set before
+		if (!$customer_id) {
+			$current_user = wp_get_current_user();
+			if ($current_user->ID ) {
+				$bc_customer_id = get_user_option('bigcommerce_customer_id', $current_user->ID);
+				if ($bc_customer_id) {
+					$body['customer_id'] = $bc_customer_id;
+				}
+			}
+		}
 
 		//make order complete
 		$pending_status_id = 1; //TODO Get status id from BC
-		$body = array( "status_id" => $pending_status_id );
-		$this->update_order( $order_id, array(
-			'status_id'      => $pending_status_id,
-			'payment_method' => 'Credit Card (Bolt)',
-		) );
+		$body['status_id'] = $pending_status_id;
+		$this->order_update( $body );
 
 		//save Bigcommerce order id
-		add_option( "bolt_order_{$order_reference}", $order_id );
-		BoltLogger::write( "add_option( \"bolt_order_{$order_reference}\", $order_id )" );
+		add_option( "bolt_order_{$order_reference}", $this->order_id );
+		BoltLogger::write( "add_option( \"bolt_order_{$order_reference}\", $this->order_id )" );
 
 		//delete cart (it doesn't delete itself altough according to the documentation it should
 		$checkout->delete();
 
-		$result["order_id"] = $order_id;
+		$result["order_id"] = $this->order_id;
 		return $result;
 	}
 
@@ -295,6 +309,9 @@ class Bolt_Save_Order
 		$result = $this->bolt_create_order( $bolt_data->reference, $bolt_data->cart->order_reference, $bolt_data, true );
 
 		//Write order id to session. We'll read it on confirmation page
+		if (headers_sent($filename, $linenum)) {
+			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't save session cos headers already sent in {$filename} {$linenum}" ) );
+		}
 		$_SESSION["bolt_order_id"] = $result["order_id"];
 		BoltLogger::write("\$_SESSION[\"bolt_order_id\"] = {$result["order_id"]};");
 		BoltLogger::write( "result in save order" . print_r( $result, true ) );

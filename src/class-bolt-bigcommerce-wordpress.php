@@ -26,6 +26,9 @@ class Bolt_Bigcommerce_Wordpress
 		require_once(dirname( __FILE__ ) . '/class-bolt-save-order.php');
 		new Bolt_Save_Order();
 
+		require_once(dirname( __FILE__ ) . '/class-bolt-page-checkout.php');
+		new Bolt_Page_Checkout();
+
 		//work with sessions
 		add_action( 'init', array( $this, 'start_session' ) );
 		add_action( 'wp_logout', array( $this, 'end_session' ) );

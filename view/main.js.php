@@ -27,12 +27,6 @@
             }
         } );
      };
-
-    var cart = {
-        "orderToken": "<?= $orderToken;?>",
-        "authcapture": <?= $authcapture;?>
-    };
-    var hints = <?= $hints;?>;
     var callbacks = {
         check: function () {
             // This function is called just before the checkout form loads.
@@ -68,6 +62,12 @@
             location.href = redirect_url;
         }
     };
+    var hints = <?= $hints;?>;
+    <?php if ( !isset( $only_hints_and_callbacks ) ) : ?>
+    var cart = {
+        "orderToken": "<?= $orderToken;?>",
+        "authcapture": <?= $authcapture;?>
+    };
     jQuery(window).load(function() {
         BoltCheckout.configure(cart, hints, callbacks);
     });
@@ -76,3 +76,4 @@
         // Re-navigate to the same page with a fresh session to avoid repeating the last action 
         window.location = window.location.href;
     });
+    <?php endif; ?>

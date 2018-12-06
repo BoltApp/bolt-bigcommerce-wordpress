@@ -6,12 +6,11 @@ class BoltSaveOrderTest extends \WP_UnitTestCase
 	/**
 	 * @dataProvider CreateOrderProvider
 	 */
-
 	public function test_CreateOrder_JsonCall_CallCheckoutMethodsSetShippingOptionAndCreateOrder($bolt_reference, $order_reference, $bolt_data, $is_json)
 	{
 		$mock_checkout = $this->getMockBuilder('BoltBigcommerce\Bolt_Checkout')
 			->disableOriginalConstructor()
-			->setMethods(array('set_shipping_option','create_order','delete'))
+			->setMethods(array('set_shipping_option','create_order','delete','get'))
 			->getMock();
 
 		$shipping_option = $bolt_data->shipping_option->value->reference;
@@ -22,18 +21,16 @@ class BoltSaveOrderTest extends \WP_UnitTestCase
 		$mock_checkout->expects($this->once())
 			->method('create_order');
 
-
 		update_option( "bolt_cart_id_" . $order_reference, array('cart_id' => true ) );
 
 		$bolt_save_order = $this->getMockBuilder('BoltBigcommerce\Bolt_Save_Order')
-			->setMethods(array('get_checkout_api', 'update_order'))
+			->setMethods(array('get_checkout_api', 'order_update'))
 			->getMock();
 		$bolt_save_order->expects($this->any())
 			->method('get_checkout_api')
 			->will($this->returnValue($mock_checkout));
 
 		$bolt_save_order->bolt_create_order( $bolt_reference, $order_reference, $bolt_data, $is_json );
-
 
 		delete_option( "bolt_cart_id_" . $order_reference );
 	}
@@ -252,7 +249,6 @@ class BoltSaveOrderTest extends \WP_UnitTestCase
 
 		$bolt_save_order->order_set_status($bolt_data);
 	}
-
 
 	public function OrderStatusDigitalProvider() {
 		return array(
