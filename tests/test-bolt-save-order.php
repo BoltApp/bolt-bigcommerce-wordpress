@@ -241,7 +241,11 @@ class BoltSaveOrderTest extends \WP_UnitTestCase
 	 * @dataProvider OrderStatusDigitalProvider
 	 */
 	public function test_SetOrderStatus_DigitalOrder_CheckReturnValue($bolt_data,$result) {
-		$bolt_save_order = $this->MockForSetOrderStatus((object)array('order_is_digital'=>true));
+		$bolt_save_order = $this->MockForSetOrderStatus((object)array(
+			'order_is_digital' => true,
+			'total_inc_tax' => 20,
+			'refunded_amount' => 0,
+		));
 
 		$bolt_save_order->expects($this->once())
 			->method('order_update')
@@ -256,8 +260,10 @@ class BoltSaveOrderTest extends \WP_UnitTestCase
 				                'result'=> array('status_id'=>10, 'payment_provider_id'=>'id' )),
 			'capture' => array( 'input' => (object)array('type'=>'capture','id'=>'id'),
 				                'result'=> array('status_id'=>10, 'payment_provider_id'=>'id' )),
-			'credit' => array( 'input' => (object)array('type'=>'credit','amount'=>1000),
-				               'result'=> array('status_id'=>4,'refunded_amount'=>10 )),
+			'credit_partially' => array( 'input' => (object)array('type'=>'credit','amount'=>1000),
+										 'result'=> array('status_id'=>14,'refunded_amount'=>10 )),
+			'credit_full' => array( 'input' => (object)array('type'=>'credit','amount'=>2000),
+				 					'result'=> array('status_id'=>4,'refunded_amount'=>20 )),
 			'void' => array( 'input' => (object)array('type'=>'void'),
 					         'result'=> array('status_id'=>5)),
 			'auth' => array( 'input' => (object)array('type'=>'auth','id'=>'id'),
@@ -267,7 +273,7 @@ class BoltSaveOrderTest extends \WP_UnitTestCase
 			'rejected_reversible' => array( 'input' => (object)array('type'=>'rejected_reversible','id'=>'id'),
 					                        'result'=> array('status_id'=>12, 'payment_provider_id'=>'id' )),
 			'rejected_irreversible' => array( 'input' => (object)array('type'=>'rejected_irreversible'),
-				                              'result'=> array('status_id'=>6,)),
+				                              'result'=> array('status_id'=>5,)),
 
 			);
 	}
@@ -276,7 +282,11 @@ class BoltSaveOrderTest extends \WP_UnitTestCase
 	 * @dataProvider OrderStatusNonDigitalProvider
 	 */
 	public function test_SetOrderStatus_NonDigitalOrder_CheckReturnValue($bolt_data,$result) {
-		$bolt_save_order = $this->MockForSetOrderStatus((object)array('order_is_digital'=>false));
+		$bolt_save_order = $this->MockForSetOrderStatus((object)array(
+			'order_is_digital' => false,
+			'total_inc_tax' => 20,
+			'refunded_amount' => 0,
+		));
 
 		$bolt_save_order->expects($this->once())
 			->method('order_update')

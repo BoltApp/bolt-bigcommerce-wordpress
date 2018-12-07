@@ -71,13 +71,14 @@ class Bolt_Page_Checkout {
 		reference: "<?= $cart_data['items'][0]['reference']?>",
 		price: <?= $cart_data['items'][0]['unit_price']/100;?>,
 		quantity: <?= $cart_data['items'][0]['quantity']?>,
-		name: "<?= $cart_data['items'][0]['name']?>"
+		name: "<?= $cart_data['items'][0]['name']?>",
 		}],
 		},
 		hints,
         callbacks,
 		{ checkoutButtonClassName: "bolt-product-buy" }));
 		<?php
+        exit;
 	}
 
 	private function restore_bigcommerce_cart_cookie($cart_id) {

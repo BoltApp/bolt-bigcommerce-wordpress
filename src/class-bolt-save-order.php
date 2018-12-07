@@ -112,7 +112,7 @@ class Bolt_Save_Order
 	function order_set_status( $bolt_data )
 	{
 		$message = '';
-		BoltLogger::write( "order_set_status( {$this->order_id}, {$bolt_data->type} )" );
+		BoltLogger::write( "order_set_status( {$this->order_id}, {$bolt_data->type} ):".print_r($bolt_data,true) );
 		$query = array();
 		//TODO If shop owner changed default statuses https://store-5669f02hng.mybigcommerce.com/manage/orders/order-statuses
 
@@ -131,8 +131,18 @@ class Bolt_Save_Order
 			$this->delete_rejected_reversible_note();
 		// credit a credit/refund was issued
 		} elseif ( 'credit' === $bolt_data->type ) {
-			$query['refunded_amount'] = $bolt_data->amount / 100;
-			$query['status_id'] = 4; //Refunded
+			$order_data = $this->getorder();
+			$rest_before_credit = $order_data->total_inc_tax - $order_data->refunded_amount;
+			$rest_after_credit = $rest_before_credit - $bolt_data->amount / 100;
+			if ( $rest_after_credit>0 ) {
+				$query['status_id'] = 14; //Partially Refunded
+			} else if ( $rest_after_credit==0 ) {
+				$query['status_id'] = 4; //Refunded
+			} else {
+				BugsnagHelper::getBugsnag()->notifyException(new \Exception("Try to refund more then rest"));
+			}
+			BoltLogger::write("order data". print_r($order_data,true));
+			$query['refunded_amount'] = $bolt_data->amount / 100 + $order_data->refunded_amount;
 			$message = 'refunded';
 		// void a void occurred
 		} elseif ( 'void' === $bolt_data->type ) {
@@ -158,7 +168,7 @@ class Bolt_Save_Order
 			$this->add_rejected_reversible_note();
 			// rejected_irreversible a transaction was rejected and decision can not be overridden.
 		} elseif ( 'rejected_irreversible' === $bolt_data->type ) {
-			$query['status_id'] = 6; // Declined
+			$query['status_id'] = 5; // Cancelled
 			$message = 'rejected_irreversible';
 			if (isset($bolt_data->reference)) {
 				$this->transaction_reference = $bolt_data->reference;
