@@ -116,7 +116,11 @@ class Bolt_Page_Checkout {
 		//create bolt cart
 		$bolt_cart_data = $this->bolt_generate_cart_data( $response );
 
-		BoltLogger::write("new cart ". print_r($_COOKIE,true));
+		//we don't need tax in this stage
+		$bolt_cart_data['cart']['total_amount'] = $bolt_cart_data['cart']['total_amount'] - $bolt_cart_data['cart']['tax_amount'];
+		$bolt_cart_data['cart']['tax_amount'] = 0;
+
+		BoltLogger::write("new cart data ". print_r($bolt_cart_data,true));
 
 		$this->restore_bigcommerce_cart_cookie($old_bigcommerce_cart_id);
 		return $bolt_cart_data;
