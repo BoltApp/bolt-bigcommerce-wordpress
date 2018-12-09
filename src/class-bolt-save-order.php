@@ -63,6 +63,7 @@ class Bolt_Save_Order
 		);
 		$bolt_data_json = file_get_contents( 'php://input' );
 		$bolt_data = json_decode( $bolt_data_json );
+		BugsnagHelper::addBreadCrumbs( array( 'WEBHOOK CALL' => array( 'body' => $bolt_data ) ) );
 		BoltLogger::write( "webhook call".print_r( $bolt_data, true ) );
 
 		if ( !$signatureVerifier->verifySignature( $bolt_data_json, $hmacHeader ) ) {

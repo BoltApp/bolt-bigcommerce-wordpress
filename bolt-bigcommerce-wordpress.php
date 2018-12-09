@@ -41,12 +41,12 @@ if ( in_array( BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH, apply_filters( 'active_plugi
 		$bolt_bigcommerce = new Bolt_Bigcommerce_Wordpress();
 	}
 
-	// include Bolt API
-	require(dirname( __FILE__ ) . '/lib/bolt-php/init.php');
-
 	// Include Bugsnag Class.
 	require_once(dirname( __FILE__ ) . '/src/BugsnagHelper.php');
 	BugsnagHelper::initBugsnag();
+
+	// include Bolt API
+	require(dirname( __FILE__ ) . '/lib/bolt-php/init.php');
 
 	require_once(dirname( __FILE__ ) . '/src/trait-bolt-order.php');
 

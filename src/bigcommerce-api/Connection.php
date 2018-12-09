@@ -86,6 +86,11 @@ class Connection
 	private $contentType;
 
 	/**
+	 * Number of requests already sent to server
+	 */
+	private static $requestNumber = 0;
+
+	/**
 	 * Initializes the connection object.
 	 */
 	public function __construct()
@@ -284,6 +289,12 @@ class Connection
 
 		$body = ($this->rawResponse) ? $this->getBody() : json_decode( $this->getBody() );
 
+		$request_name = 'BIGCOMMERCE API RESPONSE';
+		if (self::$requestNumber>1) {
+			$request_name .= ' #' . self::$requestNumber;
+		}
+		BugsnagHelper::addBreadCrumbs( array( $request_name => $body ) );
+
 		$status = $this->getStatus();
 		if ( $status >= 400 && $status <= 499 ) {
 			BoltLogger::write("status $status body title {$body->title} body ".$this->getBody());
@@ -353,6 +364,22 @@ class Connection
 		}
 	}
 
+	private function send_request_to_bugsnag($query,$body=false) {
+		self::$requestNumber++;
+		$request_name = 'BIGCOMMERCE API REQUEST';
+		if (self::$requestNumber>1) {
+			$request_name .= ' #' . self::$requestNumber;
+		}
+		$data = array(
+			'query' => $query,
+			'header' => $this->headers,
+		);
+		if ($body) {
+			$data['body'] = $body;
+		}
+		BugsnagHelper::addBreadCrumbs( array( $request_name => $data ) );
+	}
+
 	/**
 	 * Make an HTTP GET request to the specified endpoint.
 	 *
@@ -368,6 +395,7 @@ class Connection
 		if ( is_array( $query ) ) {
 			$url .= '?' . http_build_query( $query );
 		}
+		$this->send_request_to_bugsnag( $url );
 		BoltLogger::write("url={$url}");
 
 		curl_setopt( $this->curl, CURLOPT_CUSTOMREQUEST, 'GET' );
@@ -399,6 +427,7 @@ class Connection
 		}
 
 		$this->initializeRequest();
+		$this->send_request_to_bugsnag( $url, $body );
 
 		curl_setopt( $this->curl, CURLOPT_CUSTOMREQUEST, 'POST' );
 		curl_setopt( $this->curl, CURLOPT_URL, $url );
@@ -420,6 +449,7 @@ class Connection
 	public function head( $url )
 	{
 		$this->initializeRequest();
+		$this->send_request_to_bugsnag( $url );
 
 		curl_setopt( $this->curl, CURLOPT_CUSTOMREQUEST, 'HEAD' );
 		curl_setopt( $this->curl, CURLOPT_URL, $url );
@@ -448,6 +478,7 @@ class Connection
 		}
 
 		$this->initializeRequest();
+		$this->send_request_to_bugsnag( $url, $body );
 
 		$handle = tmpfile();
 		fwrite( $handle, $body );
@@ -478,6 +509,7 @@ class Connection
 	{
 		BoltLogger::write("delete url={$url}");
 		$this->initializeRequest();
+		$this->send_request_to_bugsnag( $url );
 
 		curl_setopt( $this->curl, CURLOPT_PUT, false );
 		curl_setopt( $this->curl, CURLOPT_HTTPGET, false );

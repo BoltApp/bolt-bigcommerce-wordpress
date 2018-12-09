@@ -25,6 +25,11 @@ class CurlClient
         $this->apiKey = $apiKey;
     }
 
+	/**
+	 * Number of requests already sent to server
+	 */
+	private static $requestNumber = 0;
+
     /**
      * @param string $url URL to send a request to.
      * @param array request parameters
@@ -49,6 +54,20 @@ class CurlClient
     }
 
     private function sendRequest($url, $method, $params = null ) {
+		self::$requestNumber++;
+		if (self::$requestNumber>1) {
+			$requestNumberText = ' #' . self::$requestNumber;
+		} else {
+			$requestNumberText = '';
+		}
+		$bugsnagBody = array(
+			'url' => $url,
+			'method' => $method);
+		if ($params) {
+			$bugsnagBody['params'] = $params;
+		}
+		\BoltBigcommerce\BugsnagHelper::addBreadCrumbs( array( 'BOLT API REQUEST'.$requestNumberText => $bugsnagBody ) );
+
         $ch = curl_init($url);
         $contentLength = 0;
         if ($method === self::REQUEST_TYPE_POST) {
@@ -93,6 +112,10 @@ class CurlClient
                 }
             }
         }
+		\BoltBigcommerce\BugsnagHelper::addBreadCrumbs( array( 'BOLT API RESPONSE'.$requestNumberText => array(
+			'body' => $body,
+			'boltTraceId' => $boltTraceId
+		) ) );
         return new Response($statusCode, $body ?: [], $boltTraceId);
     }
 }

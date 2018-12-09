@@ -85,6 +85,7 @@ class Bolt_Shipping_And_Tax
 		}
 
 		$bolt_order = json_decode($bolt_order_json);
+		BugsnagHelper::addBreadCrumbs( array( 'SHIPPING AND TAX REQUEST' => array( 'body' => $bolt_order ) ) );
 
 		//try get data from cache
 		$bolt_cart_md5 = md5( $bolt_order_json );
@@ -186,8 +187,8 @@ class Bolt_Shipping_And_Tax
 		} else {
 			// Cache the shipping and tax response
 			update_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5, json_encode($shipping_and_tax_payload ), false );
-  }
- return $shipping_and_tax_payload;
+  		}
+ 		return $shipping_and_tax_payload;
 	}
 
 	private function add_product_to_cart($bolt_cart_id_option) {
