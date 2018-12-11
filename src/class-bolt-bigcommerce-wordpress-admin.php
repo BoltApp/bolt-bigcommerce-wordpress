@@ -20,8 +20,17 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 	public function init()
 	{
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
 		$this->init_form_fields();
 		parent::init();
+	}
+
+	/**
+	 * Enqueue scripts
+	 */
+	public function enqueue_admin_scripts()
+	{
+		wp_enqueue_style('bolt-bigcommerce', plugins_url('css/bolt-bigcommerce.css', __FILE__));
 	}
 
 	/**
@@ -126,7 +135,7 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 	public function generate_text_html( $key, $name, $form_field ) {
 		echo '<tr>
     <th scope="row"><label for="' . $name . '">' . $form_field["title"] . '</label></th>
-    <td><input name="' . $name . '" type="text" id="' . $name . '" aria-describedby="' . $name . '-description" value="' . $this->get_option( $key ) . '" class="regular-text" />
+    <td><input name="' . $name . '" type="text" id="' . $name . '" aria-describedby="' . $name . '-description" value="' . $this->get_option( $key ) . '" class="regular-text bolt-regular-text" />
     <p class="description" id="' . $name . '-description">' . $form_field["description"] . '</p></td>
     </tr>';
 	}
