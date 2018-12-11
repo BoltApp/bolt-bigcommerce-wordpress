@@ -72,8 +72,8 @@
         BoltCheckout.configure(cart, hints, callbacks);
     });
     //cart update event.
-    jQuery(document).on('updated_cart_totals',function(){
-        // Re-navigate to the same page with a fresh session to avoid repeating the last action 
+    jQuery("body").on('DOMSubtreeModified', ".bc-cart-subtotal", function() {
+        // Re-navigate to the same page with a fresh session to avoid repeating the last action
         window.location = window.location.href;
     });
     <?php endif; ?>
