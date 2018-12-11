@@ -16,16 +16,16 @@ class Bolt_Bigcommerce_Wordpress {
 		$this->init_bolt_api();
 		$this->init_bigcommerce_api();
 
-		require_once( dirname( __FILE__ ) . '/class-bolt-generate-order-token.php' );
+		require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . 'src/class-bolt-generate-order-token.php' );
 		new Bolt_Generate_Order_Token();
 
-		require_once( dirname( __FILE__ ) . '/class-bolt-shipping-and-tax.php' );
+		require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . 'src/class-bolt-shipping-and-tax.php' );
 		new Bolt_Shipping_And_Tax();
 
-		require_once( dirname( __FILE__ ) . '/class-bolt-save-order.php' );
+		require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . 'src/class-bolt-save-order.php' );
 		new Bolt_Save_Order();
 
-		require_once( dirname( __FILE__ ) . '/class-bolt-page-checkout.php' );
+		require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . 'src/class-bolt-page-checkout.php' );
 		new Bolt_Page_Checkout();
 
 		//work with sessions
@@ -56,9 +56,9 @@ class Bolt_Bigcommerce_Wordpress {
 	 * Enqueue scripts
 	 */
 	public function enqueue_scripts() {
-		wp_enqueue_style( 'bolt-bigcommerce', plugins_url( 'css/bolt-bigcommerce.css', __FILE__ ) );
-		wp_enqueue_script( 'jquery.blockUI', plugins_url( 'js/jquery-blockui/jquery.blockUI.js', __FILE__ ), array( 'jquery' ) );
-		wp_enqueue_script( 'bolt-bigcommerce', plugins_url( 'js/bolt-bigcommerce.js', __FILE__ ) );
+		wp_enqueue_style( 'bolt-bigcommerce', BOLT_WOOCOMMERCE_PLUGIN_URL . 'src/css/bolt-bigcommerce.css', array(), BOLT_BIGCOMMERCE_VERSION, 'all' );
+		wp_enqueue_script( 'jquery.blockUI', BOLT_WOOCOMMERCE_PLUGIN_URL . 'src/js/jquery-blockui/jquery.blockUI.js', array( 'jquery' ), BOLT_BIGCOMMERCE_VERSION );
+		wp_enqueue_script( 'bolt-bigcommerce', BOLT_WOOCOMMERCE_PLUGIN_URL . 'src/js/bolt-bigcommerce.js', array(), BOLT_BIGCOMMERCE_VERSION );
 		wp_localize_script( 'bolt-bigcommerce', 'boltajax',
 			array(
 				'url' => admin_url( 'admin-ajax.php' ),
@@ -116,8 +116,6 @@ class Bolt_Bigcommerce_Wordpress {
 	protected function get_option( $key, $default = false ) {
 		return esc_attr( get_option( "bolt-bigcommerce_{$key}", $default ) );
 	}
-
-
 }
 
 /**

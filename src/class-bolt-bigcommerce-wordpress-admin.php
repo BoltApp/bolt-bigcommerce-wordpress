@@ -6,7 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once( 'class-bolt-bigcommerce-wordpress.php' );
+require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . '/src/class-bolt-bigcommerce-wordpress.php' );
 
 /*
 * Bolt_Bigcommerce_Wordpress_Admin class for setting Bolt settings.
@@ -53,7 +53,7 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress {
 	 * Enqueue scripts
 	 */
 	public function enqueue_admin_scripts() {
-		wp_enqueue_style( 'bolt-bigcommerce', plugins_url( 'css/bolt-bigcommerce.css', __FILE__ ) );
+		wp_enqueue_style( 'bolt-bigcommerce', BOLT_WOOCOMMERCE_PLUGIN_URL . 'src/css/bolt-bigcommerce.css', array(), BOLT_BIGCOMMERCE_VERSION, 'all' );
 	}
 
 	/**
