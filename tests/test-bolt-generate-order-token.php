@@ -1,4 +1,5 @@
 <?php
+
 namespace BoltBigcommerce;
 
 class BoltGenerateOrderTokenTest extends \WP_UnitTestCase {
@@ -22,32 +23,32 @@ class BoltGenerateOrderTokenTest extends \WP_UnitTestCase {
 	/**
 	 * @dataProvider BigcommerceCartProvider
 	 */
-	public function test_GenerateCartData_CheckTotalAmountAndDiscount($result, $bigcommerce_cart) {
+	public function test_GenerateCartData_CheckTotalAmountAndDiscount( $result, $bigcommerce_cart ) {
 		//don't want to check products availability in this test
-		$bolt_generate_order_token = $this->getMockBuilder('BoltBigcommerce\Bolt_Generate_Order_Token')
-			->setMethods( array('check_products_availability') )
-			->getMock();
-		$bolt_generate_order_token -> expects( $this->any() )
-			->method('check_products_availability')
-			->will($this->returnValue(true));
+		$bolt_generate_order_token = $this->getMockBuilder( 'BoltBigcommerce\Bolt_Generate_Order_Token' )
+		                                  ->setMethods( array( 'check_products_availability' ) )
+		                                  ->getMock();
+		$bolt_generate_order_token->expects( $this->any() )
+		                          ->method( 'check_products_availability' )
+		                          ->will( $this->returnValue( true ) );
 
 		$bolt_data = $bolt_generate_order_token->bolt_generate_cart_data( $bigcommerce_cart );
 		$bolt_cart = $bolt_data['cart'];
 
 		//sum of products needs to be equal total_amount+discount-tax
-		$total_amount = isset($bolt_cart['total_amount']) ? $bolt_cart['total_amount'] : 0;
-		$tax_amount = isset($bolt_cart['tax_amount']) ? $bolt_cart['tax_amount'] : 0;
-		$discount = isset($bolt_cart['discounts'][0]['amount']) ? $bolt_cart['discounts'][0]['amount'] : 0;
+		$total_amount = isset( $bolt_cart['total_amount'] ) ? $bolt_cart['total_amount'] : 0;
+		$tax_amount   = isset( $bolt_cart['tax_amount'] ) ? $bolt_cart['tax_amount'] : 0;
+		$discount     = isset( $bolt_cart['discounts'][0]['amount'] ) ? $bolt_cart['discounts'][0]['amount'] : 0;
 
-		$total_sum = $total_amount - $tax_amount + $discount;
+		$total_sum    = $total_amount - $tax_amount + $discount;
 		$products_sum = 0;
 		foreach ( $bolt_cart["items"] as $item ) {
 			$products_sum += $item['total_amount'];
 		}
 		$this->assertEquals( $total_sum, $products_sum );
 
-		if ('total_amount' == $result["type"] ) {
-			$this->assertEquals( $result['value'], $bolt_cart['total_amount']  );
+		if ( 'total_amount' == $result["type"] ) {
+			$this->assertEquals( $result['value'], $bolt_cart['total_amount'] );
 		} elseif ( 'discount' == $result["type"] ) {
 			$this->assertEquals( $result['value'], $bolt_cart['discounts'][0]['amount'] );
 		}
@@ -56,85 +57,91 @@ class BoltGenerateOrderTokenTest extends \WP_UnitTestCase {
 
 	public function BigcommerceCartProvider() {
 		return array(
-			'simple product' => array( array('type'=>'total_amount','value'=>'10000'), $this->CartsData(0)),
-			'one product + discount' => array( array('type'=>'discount','value'=>'100'), $this->CartsData(1) ),
-			'two product + discount' => array( array('type'=>'total_amount','value'=>'4745'), $this->CartsData(2) ),
+			'simple product'         => array(
+				array( 'type' => 'total_amount', 'value' => '10000' ),
+				$this->CartsData( 0 )
+			),
+			'one product + discount' => array( array( 'type' => 'discount', 'value' => '100' ), $this->CartsData( 1 ) ),
+			'two product + discount' => array(
+				array( 'type' => 'total_amount', 'value' => '4745' ),
+				$this->CartsData( 2 )
+			),
 			//TODO: add an example with tax
 		);
 	}
 
-	public function test_GenerateCatData_ProductIsnotAvailable_ReturnFalse () {
-		$bolt_generate_order_token = $this->getMockBuilder('BoltBigcommerce\Bolt_Generate_Order_Token')
-			->setMethods( array('api_call_get_product') )
-			->getMock();
-		$bolt_generate_order_token -> expects( $this->any() )
-			->method('api_call_get_product')
-			->will($this->returnValue(
-				(object) array
-				(
-					'id' => 113,
-					'name' => 'simple test product',
-					'sku' => 'test2',
-					'calculated_price' => 20.0000,
-					'is_visible' => 1,
-					'is_featured' => '',
-					'inventory_level' => 0,
-					'inventory_warning_level' => 0,
-					'inventory_tracking' => 'none',
-					'availability' => 'disabled',
-				)
-			));
-		$this->assertFalse( $bolt_generate_order_token->bolt_generate_cart_data( $this->CartsData(0 ) ) );
+	public function test_GenerateCatData_ProductIsnotAvailable_ReturnFalse() {
+		$bolt_generate_order_token = $this->getMockBuilder( 'BoltBigcommerce\Bolt_Generate_Order_Token' )
+		                                  ->setMethods( array( 'api_call_get_product' ) )
+		                                  ->getMock();
+		$bolt_generate_order_token->expects( $this->any() )
+		                          ->method( 'api_call_get_product' )
+		                          ->will( $this->returnValue(
+			                          (object) array
+			                          (
+				                          'id'                      => 113,
+				                          'name'                    => 'simple test product',
+				                          'sku'                     => 'test2',
+				                          'calculated_price'        => 20.0000,
+				                          'is_visible'              => 1,
+				                          'is_featured'             => '',
+				                          'inventory_level'         => 0,
+				                          'inventory_warning_level' => 0,
+				                          'inventory_tracking'      => 'none',
+				                          'availability'            => 'disabled',
+			                          )
+		                          ) );
+		$this->assertFalse( $bolt_generate_order_token->bolt_generate_cart_data( $this->CartsData( 0 ) ) );
 		$this->assertEquals( $bolt_generate_order_token->getError(), 'Product \'simple test product\' is currently unavailable' );
 	}
 
-	public function test_GenerateCatData_ProductIsnotEnough_ReturnFalse () {
-		$bolt_generate_order_token = $this->getMockBuilder('BoltBigcommerce\Bolt_Generate_Order_Token')
-			->setMethods( array('api_call_get_product') )
-			->getMock();
-		$bolt_generate_order_token -> expects( $this->any() )
-			->method('api_call_get_product')
-			->will($this->returnValue( (object) array
-			(
-				'id' => 113,
-				'name' => 'simple test product',
-				'sku' => 'test2',
-				'calculated_price' => 20.0000,
-				'is_visible' => 1,
-				'is_featured' => '',
-				'inventory_level' => 4,
-				'inventory_warning_level' => 0,
-				'inventory_tracking' => 'simple',
-				'availability' => 'available',
-			)));
-		$this->assertFalse( $bolt_generate_order_token->bolt_generate_cart_data( $this->CartsData(0 ) ) );
+	public function test_GenerateCatData_ProductIsnotEnough_ReturnFalse() {
+		$bolt_generate_order_token = $this->getMockBuilder( 'BoltBigcommerce\Bolt_Generate_Order_Token' )
+		                                  ->setMethods( array( 'api_call_get_product' ) )
+		                                  ->getMock();
+		$bolt_generate_order_token->expects( $this->any() )
+		                          ->method( 'api_call_get_product' )
+		                          ->will( $this->returnValue( (object) array
+		                          (
+			                          'id'                      => 113,
+			                          'name'                    => 'simple test product',
+			                          'sku'                     => 'test2',
+			                          'calculated_price'        => 20.0000,
+			                          'is_visible'              => 1,
+			                          'is_featured'             => '',
+			                          'inventory_level'         => 4,
+			                          'inventory_warning_level' => 0,
+			                          'inventory_tracking'      => 'simple',
+			                          'availability'            => 'available',
+		                          ) ) );
+		$this->assertFalse( $bolt_generate_order_token->bolt_generate_cart_data( $this->CartsData( 0 ) ) );
 		$this->assertEquals( $bolt_generate_order_token->getError(), 'We have only 4 items of \'simple test product\' on our stock' );
 	}
 
-	public function test_GenerateCatData_ProductInStock_ReturnArray () {
-		$bolt_generate_order_token = $this->getMockBuilder('BoltBigcommerce\Bolt_Generate_Order_Token')
-			->setMethods( array('api_call_get_product') )
-			->getMock();
-		$bolt_generate_order_token -> expects( $this->any() )
-			->method('api_call_get_product')
-			->will($this->returnValue( (object) array
-			(
-				'id' => 113,
-				'name' => 'simple test product',
-				'sku' => 'test2',
-				'calculated_price' => 20.0000,
-				'is_visible' => 1,
-				'is_featured' => '',
-				'inventory_level' => 5,
-				'inventory_warning_level' => 0,
-				'inventory_tracking' => 'simple',
-				'availability' => 'available',
-			)));
-		$this->assertInternalType('array', $bolt_generate_order_token->bolt_generate_cart_data( $this->CartsData(0 ) ) );
+	public function test_GenerateCatData_ProductInStock_ReturnArray() {
+		$bolt_generate_order_token = $this->getMockBuilder( 'BoltBigcommerce\Bolt_Generate_Order_Token' )
+		                                  ->setMethods( array( 'api_call_get_product' ) )
+		                                  ->getMock();
+		$bolt_generate_order_token->expects( $this->any() )
+		                          ->method( 'api_call_get_product' )
+		                          ->will( $this->returnValue( (object) array
+		                          (
+			                          'id'                      => 113,
+			                          'name'                    => 'simple test product',
+			                          'sku'                     => 'test2',
+			                          'calculated_price'        => 20.0000,
+			                          'is_visible'              => 1,
+			                          'is_featured'             => '',
+			                          'inventory_level'         => 5,
+			                          'inventory_warning_level' => 0,
+			                          'inventory_tracking'      => 'simple',
+			                          'availability'            => 'available',
+		                          ) ) );
+		$this->assertInternalType( 'array', $bolt_generate_order_token->bolt_generate_cart_data( $this->CartsData( 0 ) ) );
 	}
 
-	public function CartsData($id) {
-		switch ($id) {
+	public function CartsData( $id ) {
+		switch ( $id ) {
 			case 0:
 				//one simple product 5 * $20
 				return json_decode( '{
@@ -226,7 +233,7 @@ class BoltGenerateOrderTokenTest extends \WP_UnitTestCase {
     "raw": 100,
     "formatted": "$100.00"
   }
-}', true);
+}', true );
 				break;
 			case 1:
 				//one product + discount
@@ -332,7 +339,7 @@ class BoltGenerateOrderTokenTest extends \WP_UnitTestCase {
     "raw": 19,
     "formatted": "$19.00"
   }
-}', true);
+}', true );
 				break;
 			case 2:
 				//two product + discount
@@ -513,13 +520,11 @@ class BoltGenerateOrderTokenTest extends \WP_UnitTestCase {
     "raw": 47.45,
     "formatted": "$47.45"
   }
-}', true);
+}', true );
 				break;
 		}
 
 	}
-
-
 
 
 }

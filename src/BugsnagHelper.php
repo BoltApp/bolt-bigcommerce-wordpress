@@ -1,7 +1,8 @@
 <?php
+
 namespace BoltBigcommerce;
 
-require_once(plugin_dir_path( __FILE__ ) . "../lib/Bugsnag/Autoload.php");
+require_once( plugin_dir_path( __FILE__ ) . "../lib/Bugsnag/Autoload.php" );
 
 /**
  * Class BugsnagHelper
@@ -9,8 +10,7 @@ require_once(plugin_dir_path( __FILE__ ) . "../lib/Bugsnag/Autoload.php");
  * This class is a wrapper class around the Bugsnag client.  It is used to manage Bugsnag construction
  * and breadcrumb sent to Bugsnag
  */
-class BugsnagHelper
-{
+class BugsnagHelper {
 
 	/**
 	 * @var string  The Bugsnag notification API key for the Bolt Bigcommerce project
@@ -37,17 +37,15 @@ class BugsnagHelper
 	 *
 	 * @param array $metaData an array in the format of [key => value] for breadcrumb data
 	 */
-	public static function addBreadCrumbs( $metaData )
-	{
+	public static function addBreadCrumbs( $metaData ) {
 		static::$metaData['breadcrumbs_'] = array_merge( $metaData, static::$metaData['breadcrumbs_'] );
 	}
 
 	/**
 	 * Initialize bugsnag, including setting app and release stage
 	 */
-	public static function initBugsnag()
-	{
-		if ( !static::$bugsnag ) {
+	public static function initBugsnag() {
+		if ( ! static::$bugsnag ) {
 			$bugsnag = new \Bugsnag_Client( static::$apiKey );
 
 			$bugsnag->setErrorReportingLevel( E_ERROR );
@@ -69,9 +67,9 @@ class BugsnagHelper
 	 *
 	 * @return Bugsnag_Client
 	 */
-	public static function getBugsnag()
-	{
+	public static function getBugsnag() {
 		static::initBugsnag();
+
 		return static::$bugsnag;
 	}
 
@@ -83,14 +81,13 @@ class BugsnagHelper
 	 * @param Bugsnag_Error $error
 	 */
 
-	public static function beforeNotifyFunction( $error )
-	{
+	public static function beforeNotifyFunction( $error ) {
 		$meta_data = array(
-			'Bolt-Plugin-Version' => BOLT_BIGCOMMERCE_VERSION,
+			'Bolt-Plugin-Version'        => BOLT_BIGCOMMERCE_VERSION,
 			'Bigcommerce-Plugin-Version' => BIGCOMMERCE_VERSION,
-			'Wordpress-Version' => get_bloginfo('version'),
-			'Store-URL' => get_site_url(),
-			'Bigcommerce-Store-URL' => get_option( "bigcommerce_store_url" ),
+			'Wordpress-Version'          => get_bloginfo( 'version' ),
+			'Store-URL'                  => get_site_url(),
+			'Bigcommerce-Store-URL'      => get_option( "bigcommerce_store_url" ),
 		);
 		if ( $trace_id = @$_SERVER['HTTP_X-BOLT-TRACE-ID'] ) {
 			$meta_data['Bolt-Trace-Id'] = $trace_id;

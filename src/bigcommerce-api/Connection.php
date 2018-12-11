@@ -1,11 +1,11 @@
 <?php
+
 namespace BoltBigcommerce;
 
 /**
  * HTTP connection.
  */
-class Connection
-{
+class Connection {
 	/**
 	 * XML media type.
 	 */
@@ -93,9 +93,8 @@ class Connection
 	/**
 	 * Initializes the connection object.
 	 */
-	public function __construct()
-	{
-		if ( !defined( 'STDIN' ) ) {
+	public function __construct() {
+		if ( ! defined( 'STDIN' ) ) {
 			define( 'STDIN', fopen( 'php://stdin', 'r' ) );
 		}
 		$this->curl = curl_init();
@@ -105,7 +104,7 @@ class Connection
 		// Set to a blank string to make cURL include all encodings it can handle (gzip, deflate, identity) in the 'Accept-Encoding' request header and respect the 'Content-Encoding' response header
 		curl_setopt( $this->curl, CURLOPT_ENCODING, '' );
 
-		if ( !ini_get( "open_basedir" ) ) {
+		if ( ! ini_get( "open_basedir" ) ) {
 			curl_setopt( $this->curl, CURLOPT_FOLLOWLOCATION, true );
 		} else {
 			$this->followLocation = true;
@@ -120,8 +119,7 @@ class Connection
 	 *
 	 * @param bool $option the new state of this feature
 	 */
-	public function useXml( $option = true )
-	{
+	public function useXml( $option = true ) {
 		if ( $option ) {
 			$this->contentType = self::MEDIA_TYPE_XML;
 			$this->rawResponse = true;
@@ -137,8 +135,7 @@ class Connection
 	 *
 	 * @param bool $option the new state of this feature
 	 */
-	public function useUrlEncoded( $option = true )
-	{
+	public function useUrlEncoded( $option = true ) {
 		if ( $option ) {
 			$this->contentType = self::MEDIA_TYPE_WWW;
 		}
@@ -159,8 +156,7 @@ class Connection
 	 *
 	 * @param bool $option the new state of this feature
 	 */
-	public function failOnError( $option = true )
-	{
+	public function failOnError( $option = true ) {
 		$this->failOnError = $option;
 	}
 
@@ -170,8 +166,7 @@ class Connection
 	 * @param string $username
 	 * @param string $password
 	 */
-	public function authenticateBasic( $username, $password )
-	{
+	public function authenticateBasic( $username, $password ) {
 		curl_setopt( $this->curl, CURLOPT_USERPWD, "$username:$password" );
 	}
 
@@ -181,8 +176,7 @@ class Connection
 	 * @param string $clientId
 	 * @param string $authToken
 	 */
-	public function authenticateOauth( $clientId, $authToken )
-	{
+	public function authenticateOauth( $clientId, $authToken ) {
 		$this->addHeader( 'X-Auth-Client', $clientId );
 		$this->addHeader( 'X-Auth-Token', $authToken );
 	}
@@ -193,8 +187,7 @@ class Connection
 	 *
 	 * @param int $timeout number of seconds to wait on a response
 	 */
-	public function setTimeout( $timeout )
-	{
+	public function setTimeout( $timeout ) {
 		curl_setopt( $this->curl, CURLOPT_TIMEOUT, $timeout );
 		curl_setopt( $this->curl, CURLOPT_CONNECTTIMEOUT, $timeout );
 	}
@@ -205,8 +198,7 @@ class Connection
 	 * @param string $server
 	 * @param int|bool $port optional port number
 	 */
-	public function useProxy( $server, $port = false )
-	{
+	public function useProxy( $server, $port = false ) {
 		curl_setopt( $this->curl, CURLOPT_PROXY, $server );
 
 		if ( $port ) {
@@ -216,10 +208,10 @@ class Connection
 
 	/**
 	 * @todo may need to handle CURLOPT_SSL_VERIFYHOST and CURLOPT_CAINFO as well
+	 *
 	 * @param boolean
 	 */
-	public function verifyPeer( $option = false )
-	{
+	public function verifyPeer( $option = false ) {
 		curl_setopt( $this->curl, CURLOPT_SSL_VERIFYPEER, $option );
 	}
 
@@ -229,9 +221,8 @@ class Connection
 	 * @param string $header
 	 * @param string $value
 	 */
-	public function addHeader( $header, $value )
-	{
-		$this->headers[$header] = "$header: $value";
+	public function addHeader( $header, $value ) {
+		$this->headers[ $header ] = "$header: $value";
 	}
 
 	/**
@@ -239,9 +230,8 @@ class Connection
 	 *
 	 * @param string $header
 	 */
-	public function removeHeader( $header )
-	{
-		unset( $this->headers[$header] );
+	public function removeHeader( $header ) {
+		unset( $this->headers[ $header ] );
 	}
 
 	/**
@@ -249,20 +239,18 @@ class Connection
 	 *
 	 * Defaults to application/json
 	 */
-	private function getContentType()
-	{
-		return ($this->contentType) ? $this->contentType : self::MEDIA_TYPE_JSON;
+	private function getContentType() {
+		return ( $this->contentType ) ? $this->contentType : self::MEDIA_TYPE_JSON;
 	}
 
 	/**
 	 * Clear previously cached request data and prepare for
 	 * making a fresh request.
 	 */
-	private function initializeRequest()
-	{
-		$this->responseBody = '';
+	private function initializeRequest() {
+		$this->responseBody    = '';
 		$this->responseHeaders = array();
-		$this->lastError = false;
+		$this->lastError       = false;
 		$this->addHeader( 'Accept', $this->getContentType() );
 
 		curl_setopt( $this->curl, CURLOPT_POST, false );
@@ -270,7 +258,7 @@ class Connection
 		curl_setopt( $this->curl, CURLOPT_HTTPGET, false );
 
 		curl_setopt( $this->curl, CURLOPT_HTTPHEADER, $this->headers );
-		BoltLogger::write("headers".print_r($this->headers,true));
+		BoltLogger::write( "headers" . print_r( $this->headers, true ) );
 	}
 
 	/**
@@ -279,37 +267,38 @@ class Connection
 	 * If failOnError is true, a client or server error is raised, otherwise returns false
 	 * on error.
 	 */
-	private function handleResponse()
-	{
+	private function handleResponse() {
 		if ( curl_errno( $this->curl ) ) {
-			BoltLogger::write("error ".curl_error( $this->curl )." ".curl_errno( $this->curl ));
+			BoltLogger::write( "error " . curl_error( $this->curl ) . " " . curl_errno( $this->curl ) );
 			throw new NetworkError( curl_error( $this->curl ), curl_errno( $this->curl ) );
 		}
-		BoltLogger::write("this->getBody:".$this->getBody());
+		BoltLogger::write( "this->getBody:" . $this->getBody() );
 
-		$body = ($this->rawResponse) ? $this->getBody() : json_decode( $this->getBody() );
+		$body = ( $this->rawResponse ) ? $this->getBody() : json_decode( $this->getBody() );
 
 		$request_name = 'BIGCOMMERCE API RESPONSE';
-		if (self::$requestNumber>1) {
+		if ( self::$requestNumber > 1 ) {
 			$request_name .= ' #' . self::$requestNumber;
 		}
 		BugsnagHelper::addBreadCrumbs( array( $request_name => $body ) );
 
 		$status = $this->getStatus();
 		if ( $status >= 400 && $status <= 499 ) {
-			BoltLogger::write("status $status body title {$body->title} body ".$this->getBody());
+			BoltLogger::write( "status $status body title {$body->title} body " . $this->getBody() );
 			if ( $this->failOnError ) {
 				throw new \Exception( $body->title, $status );
 			} else {
 				$this->lastError = $body;
+
 				return false;
 			}
 		} elseif ( $status >= 500 && $status <= 599 ) {
-			BoltLogger::write("status $status");
+			BoltLogger::write( "status $status" );
 			if ( $this->failOnError ) {
 				throw new \Exception( $body, $status );
 			} else {
 				$this->lastError = $body;
+
 				return false;
 			}
 		}
@@ -325,8 +314,7 @@ class Connection
 	 * Return an representation of an error returned by the last request, or false
 	 * if the last request was not an error.
 	 */
-	public function getLastError()
-	{
+	public function getLastError() {
 		return $this->lastError;
 	}
 
@@ -337,20 +325,19 @@ class Connection
 	 * Only 301 and 302 redirects are handled. Redirects from POST and PUT requests will
 	 * be converted into GET requests, as per the HTTP spec.
 	 */
-	private function followRedirectPath()
-	{
-		$this->redirectsFollowed++;
+	private function followRedirectPath() {
+		$this->redirectsFollowed ++;
 
 		if ( $this->getStatus() == 301 || $this->getStatus() == 302 ) {
 			if ( $this->redirectsFollowed < $this->maxRedirects ) {
-				$location = $this->getHeader( 'Location' );
+				$location  = $this->getHeader( 'Location' );
 				$forwardTo = parse_url( $location );
 
 				if ( isset( $forwardTo['scheme'] ) && isset( $forwardTo['host'] ) ) {
 					$url = $location;
 				} else {
 					$forwardFrom = parse_url( curl_getinfo( $this->curl, CURLINFO_EFFECTIVE_URL ) );
-					$url = $forwardFrom['scheme'] . '://' . $forwardFrom['host'] . $location;
+					$url         = $forwardFrom['scheme'] . '://' . $forwardFrom['host'] . $location;
 				}
 
 				$this->get( $url );
@@ -364,17 +351,17 @@ class Connection
 		}
 	}
 
-	private function send_request_to_bugsnag($query,$body=false) {
-		self::$requestNumber++;
+	private function send_request_to_bugsnag( $query, $body = false ) {
+		self::$requestNumber ++;
 		$request_name = 'BIGCOMMERCE API REQUEST';
-		if (self::$requestNumber>1) {
+		if ( self::$requestNumber > 1 ) {
 			$request_name .= ' #' . self::$requestNumber;
 		}
 		$data = array(
-			'query' => $query,
+			'query'  => $query,
 			'header' => $this->headers,
 		);
-		if ($body) {
+		if ( $body ) {
 			$data['body'] = $body;
 		}
 		BugsnagHelper::addBreadCrumbs( array( $request_name => $data ) );
@@ -388,15 +375,14 @@ class Connection
 	 *
 	 * @return mixed
 	 */
-	public function get( $url, $query = false )
-	{
+	public function get( $url, $query = false ) {
 		$this->initializeRequest();
 
 		if ( is_array( $query ) ) {
 			$url .= '?' . http_build_query( $query );
 		}
 		$this->send_request_to_bugsnag( $url );
-		BoltLogger::write("url={$url}");
+		BoltLogger::write( "url={$url}" );
 
 		curl_setopt( $this->curl, CURLOPT_CUSTOMREQUEST, 'GET' );
 		curl_setopt( $this->curl, CURLOPT_URL, $url );
@@ -416,13 +402,12 @@ class Connection
 	 *
 	 * @return mixed
 	 */
-	public function post( $url, $body )
-	{
+	public function post( $url, $body ) {
 		$this->addHeader( 'Content-Type', $this->getContentType() );
 
-		BoltLogger::write("url={$url}");
+		BoltLogger::write( "url={$url}" );
 
-		if ( !is_string( $body ) ) {
+		if ( ! is_string( $body ) ) {
 			$body = json_encode( $body );
 		}
 
@@ -444,10 +429,10 @@ class Connection
 	 * Make an HTTP HEAD request to the specified endpoint.
 	 *
 	 * @param string $url URL to which we send the request
+	 *
 	 * @return mixed
 	 */
-	public function head( $url )
-	{
+	public function head( $url ) {
 		$this->initializeRequest();
 		$this->send_request_to_bugsnag( $url );
 
@@ -467,13 +452,13 @@ class Connection
 	 *
 	 * @param string $url URL to which we send the request
 	 * @param mixed $body Data payload (JSON string or raw data)
+	 *
 	 * @return mixed
 	 */
-	public function put( $url, $body )
-	{
+	public function put( $url, $body ) {
 		$this->addHeader( 'Content-Type', $this->getContentType() );
 
-		if ( !is_string( $body ) ) {
+		if ( ! is_string( $body ) ) {
 			$body = json_encode( $body );
 		}
 
@@ -503,11 +488,11 @@ class Connection
 	 * Make an HTTP DELETE request to the specified endpoint.
 	 *
 	 * @param string $url URL to which we send the request
+	 *
 	 * @return mixed
 	 */
-	public function delete( $url )
-	{
-		BoltLogger::write("delete url={$url}");
+	public function delete( $url ) {
+		BoltLogger::write( "delete url={$url}" );
 		$this->initializeRequest();
 		$this->send_request_to_bugsnag( $url );
 
@@ -526,11 +511,12 @@ class Connection
 	 *
 	 * @param resource $curl
 	 * @param string $body
+	 *
 	 * @return int
 	 */
-	private function parseBody( $curl, $body )
-	{
+	private function parseBody( $curl, $body ) {
 		$this->responseBody .= $body;
+
 		return strlen( $body );
 	}
 
@@ -539,18 +525,19 @@ class Connection
 	 *
 	 * @param resource $curl
 	 * @param string $headers
+	 *
 	 * @return int
 	 */
-	private function parseHeader( $curl, $headers )
-	{
-		if ( !$this->responseStatusLine && strpos( $headers, 'HTTP/' ) === 0 ) {
+	private function parseHeader( $curl, $headers ) {
+		if ( ! $this->responseStatusLine && strpos( $headers, 'HTTP/' ) === 0 ) {
 			$this->responseStatusLine = $headers;
 		} else {
 			$parts = explode( ': ', $headers );
 			if ( isset( $parts[1] ) ) {
-				$this->responseHeaders[$parts[0]] = trim( $parts[1] );
+				$this->responseHeaders[ $parts[0] ] = trim( $parts[1] );
 			}
 		}
+
 		return strlen( $headers );
 	}
 
@@ -559,8 +546,7 @@ class Connection
 	 *
 	 * @return mixed
 	 */
-	public function getStatus()
-	{
+	public function getStatus() {
 		return curl_getinfo( $this->curl, CURLINFO_HTTP_CODE );
 	}
 
@@ -569,8 +555,7 @@ class Connection
 	 *
 	 * @return string
 	 */
-	public function getStatusMessage()
-	{
+	public function getStatusMessage() {
 		return $this->responseStatusLine;
 	}
 
@@ -579,8 +564,7 @@ class Connection
 	 *
 	 * @return string
 	 */
-	public function getBody()
-	{
+	public function getBody() {
 		return $this->responseBody;
 	}
 
@@ -591,26 +575,23 @@ class Connection
 	 *
 	 * @return string|void
 	 */
-	public function getHeader( $header )
-	{
+	public function getHeader( $header ) {
 		if ( array_key_exists( $header, $this->responseHeaders ) ) {
-			return $this->responseHeaders[$header];
+			return $this->responseHeaders[ $header ];
 		}
 	}
 
 	/**
 	 * Return the full list of response headers
 	 */
-	public function getHeaders()
-	{
+	public function getHeaders() {
 		return $this->responseHeaders;
 	}
 
 	/**
 	 * Close the cURL resource when the instance is garbage collected
 	 */
-	public function __destruct()
-	{
+	public function __destruct() {
 		curl_close( $this->curl );
 	}
 }

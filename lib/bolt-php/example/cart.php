@@ -1,26 +1,26 @@
 <?php
 /** Render valid HTML with bolt checkout button */
-require(dirname(__FILE__) . '/init_example.php');
+require( dirname( __FILE__ ) . '/init_example.php' );
 
-$successUrl = 'order_confirmation.php';
+$successUrl   = 'order_confirmation.php';
 $saveOrderUrl = 'create_order.php';
 
-$client = new \BoltPay\ApiClient([
-    'api_key' => \BoltPay\Bolt::$apiKey,
-    'is_sandbox' => \BoltPay\Bolt::$isSandboxMode
-]);
+$client = new \BoltPay\ApiClient( [
+	'api_key'    => \BoltPay\Bolt::$apiKey,
+	'is_sandbox' => \BoltPay\Bolt::$isSandboxMode
+] );
 
 
 $exampleData = new \BoltPay\Example\Data();
-$cartData = $exampleData->generateCart();
-$cartItems = @$cartData['cart']['items'];
-$currency = @$cartData['cart']['currency'];
-$discounts = @$cartData['cart']['discounts'];
-$grandTotal = @$cartData['cart']['total_amount'];
+$cartData    = $exampleData->generateCart();
+$cartItems   = @$cartData['cart']['items'];
+$currency    = @$cartData['cart']['currency'];
+$discounts   = @$cartData['cart']['discounts'];
+$grandTotal  = @$cartData['cart']['total_amount'];
 
 /** @var \BoltPay\Http\Response $response */
-$response = $client->createOrder($cartData);
-$orderToken = $response->isResponseSuccessful()  ? @$response->getBody()->token : '';
+$response   = $client->createOrder( $cartData );
+$orderToken = $response->isResponseSuccessful() ? @$response->getBody()->token : '';
 ?>
 
 
@@ -28,8 +28,8 @@ $orderToken = $response->isResponseSuccessful()  ? @$response->getBody()->token 
 <head>
     <title>Bolt php library demo</title>
 
-    <?= \BoltPay\Helper::renderBoltTrackScriptTag(); ?>
-    <?= \BoltPay\Helper::renderBoltConnectScriptTag(); ?>
+	<?= \BoltPay\Helper::renderBoltTrackScriptTag(); ?>
+	<?= \BoltPay\Helper::renderBoltConnectScriptTag(); ?>
     <style>
         * {
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -165,42 +165,42 @@ $orderToken = $response->isResponseSuccessful()  ? @$response->getBody()->token 
                 <th>QTY</th>
                 <th>SUBTOTAL</th>
             </tr>
-            <?php foreach ($cartItems as $item): ?>
+			<?php foreach ( $cartItems as $item ): ?>
                 <tr>
                     <td>
                         <div class="product-name">
-                            <?= @$item['name'] ?>
+							<?= @$item['name'] ?>
                         </div>
                         <div class="product-sku">
                             <span>Sku:</span>
-                            <?= @$item['sku'] ?>
+							<?= @$item['sku'] ?>
                         </div>
                     </td>
-                    <td><?= $exampleData->getPriceDisplay(@$item['unit_price'] , $currency)?></td>
+                    <td><?= $exampleData->getPriceDisplay( @$item['unit_price'], $currency ) ?></td>
                     <td><?= @$item['quantity'] ?></td>
-                    <td><?= $exampleData->getPriceDisplay(@$item['total_amount'] , $currency)?></td>
+                    <td><?= $exampleData->getPriceDisplay( @$item['total_amount'], $currency ) ?></td>
                 </tr>
-            <?php endforeach; ?>
+			<?php endforeach; ?>
         </table>
     </form>
 
     <div class="cart-totals">
         <p>Summary</p>
         <table>
-            <?php foreach ($discounts as $discount) : ?>
+			<?php foreach ( $discounts as $discount ) : ?>
                 <tr>
                     <td><?= @$discount['description'] ?></td>
                     <td>
-                        -<?= $exampleData->getPriceDisplay(@$discount['amount'] , $currency)?>
+                        -<?= $exampleData->getPriceDisplay( @$discount['amount'], $currency ) ?>
                     </td>
                 </tr>
-            <?php endforeach; ?>
+			<?php endforeach; ?>
             <tr class="grand-total">
                 <td>
                     <strong>GRAND TOTAL</strong>
                 </td>
                 <td>
-                    <strong><?= $exampleData->getPriceDisplay($grandTotal , $currency)?></strong>
+                    <strong><?= $exampleData->getPriceDisplay( $grandTotal, $currency ) ?></strong>
                 </td>
             </tr>
         </table>

@@ -1,14 +1,13 @@
 <?php
+
 namespace BoltBigcommerce;
 
-if ( !defined( 'ABSPATH' ) ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class Bolt_Confirmation_Page
-{
-	public function __construct()
-	{
+class Bolt_Confirmation_Page {
+	public function __construct() {
 		add_shortcode( 'bolt-confirmation', array( $this, 'shortcode' ) );
 	}
 
@@ -18,14 +17,13 @@ class Bolt_Confirmation_Page
 	 * @return string page HTML code
 	 */
 	//TODO Add test when Bigcommerce became open beta
-	public function shortcode()
-	{
+	public function shortcode() {
 		if ( $_SESSION["bolt_order_id"] ) {
 			$order_id = $_SESSION["bolt_order_id"];
 			$customer = new \BigCommerce\Accounts\Customer( get_current_user_id() );
 			$order    = $customer->get_order_details( $order_id );
 			if ( empty( $order ) ) {
-				$controller = \BigCommerce\Templates\Order_Not_Found::factory([]);
+				$controller = \BigCommerce\Templates\Order_Not_Found::factory( [] );
 			} else {
 				$controller = \BigCommerce\Templates\Order_Details::factory( [ \BigCommerce\Templates\Order_Details::ORDER => $order ] );
 			}
@@ -33,6 +31,7 @@ class Bolt_Confirmation_Page
 		} else {
 			$result = "Error";
 		}
+
 		return $result;
 	}
 
@@ -42,9 +41,8 @@ class Bolt_Confirmation_Page
 	 *
 	 * @return int post_id
 	 */
-	private function get_post_id()
-	{
-		$post_id = (int)get_option( "bolt-confirmation-post-id", 0 );
+	private function get_post_id() {
+		$post_id = (int) get_option( "bolt-confirmation-post-id", 0 );
 		if ( $post_id == 0 ) {
 			$post_id = $this->get_post_candidate();
 			if ( $post_id == 0 ) {
@@ -52,6 +50,7 @@ class Bolt_Confirmation_Page
 			}
 			update_option( "bolt-confirmation-post-id", $post_id );
 		}
+
 		return $post_id;
 	}
 
@@ -61,17 +60,17 @@ class Bolt_Confirmation_Page
 	 *
 	 * @return int post_id
 	 */
-	private function get_post_candidate()
-	{
+	private function get_post_candidate() {
 		global $wpdb;
-		$content = "[bolt-confirmation]";
+		$content      = "[bolt-confirmation]";
 		$content_like = '%' . $wpdb->esc_like( $content ) . '%';
-		$post_ids = $wpdb->get_col( $wpdb->prepare(
+		$post_ids     = $wpdb->get_col( $wpdb->prepare(
 			"SELECT ID FROM {$wpdb->posts} WHERE post_type=%s AND post_status='publish' AND post_content LIKE %s",
 			'page',
 			$content_like
 		) );
-		return isset($post_ids[0]) ? (int)$post_ids[0] : 0;
+
+		return isset( $post_ids[0] ) ? (int) $post_ids[0] : 0;
 	}
 
 	/**
@@ -79,19 +78,18 @@ class Bolt_Confirmation_Page
 	 *
 	 * @return int post_id
 	 */
-	private function create_post()
-	{
-		$args = array(
-			'post_type' => 'page',
-			'post_status' => 'publish',
-			'post_title' => 'Thanks for your order',
-			'post_name' => 'order confirmation',
-			'post_content' => "[bolt-confirmation]",
+	private function create_post() {
+		$args    = array(
+			'post_type'      => 'page',
+			'post_status'    => 'publish',
+			'post_title'     => 'Thanks for your order',
+			'post_name'      => 'order confirmation',
+			'post_content'   => "[bolt-confirmation]",
 			'comment_status' => 'closed',
-			'ping_status' => 'closed',
+			'ping_status'    => 'closed',
 		);
 		$post_id = wp_insert_post( $args );
-		if (!$post_id) {
+		if ( ! $post_id ) {
 			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't create page" ) );
 		}
 
@@ -105,8 +103,7 @@ class Bolt_Confirmation_Page
 	 *
 	 * @return string url
 	 */
-	public function get_url()
-	{
+	public function get_url() {
 		return get_permalink( $this->get_post_id() );
 	}
 }

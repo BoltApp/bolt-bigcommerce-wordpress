@@ -1,11 +1,11 @@
 <?php
+
 namespace BoltBigcommerce;
 
 /**
  * Bigcommerce API Client.
  */
-class BCClient
-{
+class BCClient {
 	/**
 	 * Full Store URL to connect to
 	 *
@@ -70,8 +70,7 @@ class BCClient
 	 *
 	 * @param array $settings
 	 */
-	public static function configure( $settings )
-	{
+	public static function configure( $settings ) {
 		if ( isset( $settings['client_id'] ) ) {
 			self::configureOAuth( $settings );
 		} else {
@@ -89,25 +88,25 @@ class BCClient
 	 * - store_hash
 	 *
 	 * @param array $settings
+	 *
 	 * @throws \Exception
 	 */
-	public static function configureOAuth( $settings )
-	{
-		if ( !isset( $settings['auth_token'] ) ) {
+	public static function configureOAuth( $settings ) {
+		if ( ! isset( $settings['auth_token'] ) ) {
 			throw new Exception( "'auth_token' must be provided" );
 		}
 
-		if ( !isset( $settings['store_hash'] ) ) {
+		if ( ! isset( $settings['store_hash'] ) ) {
 			throw new Exception( "'store_hash' must be provided" );
 		}
 
-		self::$client_id = $settings['client_id'];
+		self::$client_id  = $settings['client_id'];
 		self::$auth_token = $settings['auth_token'];
 		self::$store_hash = $settings['store_hash'];
 
 		self::$client_secret = isset( $settings['client_secret'] ) ? $settings['client_secret'] : null;
 
-		self::$api_path = self::$api_url . sprintf( self::$stores_prefix, self::$store_hash );
+		self::$api_path   = self::$api_url . sprintf( self::$stores_prefix, self::$store_hash );
 		self::$connection = false;
 	}
 
@@ -121,26 +120,26 @@ class BCClient
 	 * - api_key
 	 *
 	 * @param array $settings
+	 *
 	 * @throws \Exception
 	 */
-	public static function configureBasicAuth( array $settings )
-	{
-		if ( !isset( $settings['store_url'] ) ) {
+	public static function configureBasicAuth( array $settings ) {
+		if ( ! isset( $settings['store_url'] ) ) {
 			throw new Exception( "'store_url' must be provided" );
 		}
 
-		if ( !isset( $settings['username'] ) ) {
+		if ( ! isset( $settings['username'] ) ) {
 			throw new Exception( "'username' must be provided" );
 		}
 
-		if ( !isset( $settings['api_key'] ) ) {
+		if ( ! isset( $settings['api_key'] ) ) {
 			throw new Exception( "'api_key' must be provided" );
 		}
 
-		self::$username = $settings['username'];
-		self::$api_key = $settings['api_key'];
-		self::$store_url = rtrim( $settings['store_url'], '/' );
-		self::$api_path = self::$store_url . self::$path_prefix;
+		self::$username   = $settings['username'];
+		self::$api_key    = $settings['api_key'];
+		self::$store_url  = rtrim( $settings['store_url'], '/' );
+		self::$api_path   = self::$store_url . self::$path_prefix;
 		self::$connection = false;
 	}
 
@@ -151,16 +150,14 @@ class BCClient
 	 *
 	 * @param bool $option sets the value of this flag
 	 */
-	public static function failOnError( $option = true )
-	{
+	public static function failOnError( $option = true ) {
 		self::connection()->failOnError( $option );
 	}
 
 	/**
 	 * Return XML strings from the API instead of building objects.
 	 */
-	public static function useXml()
-	{
+	public static function useXml() {
 		self::connection()->useXml();
 	}
 
@@ -168,8 +165,7 @@ class BCClient
 	 * Return JSON objects from the API instead of XML Strings.
 	 * This is the default behavior.
 	 */
-	public static function useJson()
-	{
+	public static function useJson() {
 		self::connection()->useXml( false );
 	}
 
@@ -178,8 +174,7 @@ class BCClient
 	 *
 	 * @param bool $option sets the value of this flag
 	 */
-	public static function verifyPeer( $option = false )
-	{
+	public static function verifyPeer( $option = false ) {
 		self::connection()->verifyPeer( $option );
 	}
 
@@ -189,8 +184,7 @@ class BCClient
 	 * @param string $host host server
 	 * @param int|bool $port port number to use, or false
 	 */
-	public static function useProxy( $host, $port = false )
-	{
+	public static function useProxy( $host, $port = false ) {
 		self::connection()->useProxy( $host, $port );
 	}
 
@@ -200,8 +194,7 @@ class BCClient
 	 *
 	 * @return string
 	 */
-	public static function getLastError()
-	{
+	public static function getLastError() {
 		return self::connection()->getLastError();
 	}
 
@@ -211,9 +204,8 @@ class BCClient
 	 *
 	 * @return Connection
 	 */
-	private static function connection()
-	{
-		if ( !self::$connection ) {
+	private static function connection() {
+		if ( ! self::$connection ) {
 			self::$connection = new Connection();
 			if ( self::$client_id ) {
 				self::$connection->authenticateOauth( self::$client_id, self::$auth_token );
@@ -230,8 +222,7 @@ class BCClient
 	 *
 	 * @return Connection
 	 */
-	public static function getConnection()
-	{
+	public static function getConnection() {
 		return self::connection();
 	}
 
@@ -240,8 +231,7 @@ class BCClient
 	 *
 	 * @param Connection $connection The connection to use
 	 */
-	public static function setConnection( Connection $connection = null )
-	{
+	public static function setConnection( Connection $connection = null ) {
 		self::$connection = $connection;
 	}
 
@@ -250,10 +240,10 @@ class BCClient
 	 *
 	 * @param string $path api endpoint
 	 * @param string $resource resource class to map individual items
+	 *
 	 * @return mixed array|string mapped collection or XML string if useXml is true
 	 */
-	public static function getCollection( $path, $resource = 'Resource' )
-	{
+	public static function getCollection( $path, $resource = 'Resource' ) {
 		$response = self::connection()->get( self::$api_path . $path );
 
 		return self::mapCollection( $resource, $response );
@@ -264,10 +254,10 @@ class BCClient
 	 *
 	 * @param string $path api endpoint
 	 * @param string $resource resource class to map individual items
+	 *
 	 * @return mixed Resource|string resource object or XML string if useXml is true
 	 */
-	public static function getResource( $path, $resource = 'Resource' )
-	{
+	public static function getResource( $path, $resource = 'Resource' ) {
 		$response = self::connection()->get( self::$api_path . $path );
 
 		return self::mapResource( $resource, $response );
@@ -277,10 +267,10 @@ class BCClient
 	 * Get a count value from the specified endpoint.
 	 *
 	 * @param string $path api endpoint
+	 *
 	 * @return mixed int|string count value or XML string if useXml is true
 	 */
-	public static function getCount( $path )
-	{
+	public static function getCount( $path ) {
 		$response = self::connection()->get( self::$api_path . $path );
 
 		if ( $response == false || is_string( $response ) ) {
@@ -295,12 +285,12 @@ class BCClient
 	 *
 	 * @param string $path api endpoint
 	 * @param mixed $object object or XML string to create
+	 *
 	 * @return mixed
 	 */
-	public static function createResource( $path, $object )
-	{
+	public static function createResource( $path, $object ) {
 		if ( is_array( $object ) ) {
-			$object = (object)$object;
+			$object = (object) $object;
 		}
 
 		return self::connection()->post( self::$api_path . $path, $object );
@@ -311,12 +301,12 @@ class BCClient
 	 *
 	 * @param string $path api endpoint
 	 * @param mixed $object object or XML string to update
+	 *
 	 * @return mixed
 	 */
-	public static function updateResource( $path, $object )
-	{
+	public static function updateResource( $path, $object ) {
 		if ( is_array( $object ) ) {
-			$object = (object)$object;
+			$object = (object) $object;
 		}
 
 		return self::connection()->put( self::$api_path . $path, $object );
@@ -326,10 +316,10 @@ class BCClient
 	 * Send a delete request to remove the specified resource.
 	 *
 	 * @param string $path api endpoint
+	 *
 	 * @return mixed
 	 */
-	public static function deleteResource( $path )
-	{
+	public static function deleteResource( $path ) {
 		return self::connection()->delete( self::$api_path . $path );
 	}
 
@@ -338,17 +328,17 @@ class BCClient
 	 *
 	 * @param string $resource name of the resource class
 	 * @param array $object object collection
+	 *
 	 * @return array
 	 */
-	private static function mapCollection( $resource, $object )
-	{
+	private static function mapCollection( $resource, $object ) {
 		return $object;
 		if ( $object == false || is_string( $object ) ) {
 			return $object;
 		}
 
-		$baseResource = __NAMESPACE__ . '\\' . $resource;
-		self::$resource = (class_exists( $baseResource )) ? $baseResource : 'Bigcommerce\\Api\\Resources\\' . $resource;
+		$baseResource   = __NAMESPACE__ . '\\' . $resource;
+		self::$resource = ( class_exists( $baseResource ) ) ? $baseResource : 'Bigcommerce\\Api\\Resources\\' . $resource;
 
 		return array_map( array( 'self', 'mapCollectionObject' ), $object );
 	}
@@ -357,10 +347,10 @@ class BCClient
 	 * Callback for mapping collection objects resource classes.
 	 *
 	 * @param \stdClass $object
+	 *
 	 * @return Resource
 	 */
-	private static function mapCollectionObject( $object )
-	{
+	private static function mapCollectionObject( $object ) {
 		$class = self::$resource;
 
 		return new $class( $object );
@@ -371,16 +361,16 @@ class BCClient
 	 *
 	 * @param string $resource name of the resource class
 	 * @param \stdClass $object
+	 *
 	 * @return Resource
 	 */
-	private static function mapResource( $resource, $object )
-	{
+	private static function mapResource( $resource, $object ) {
 		if ( $object == false || is_string( $object ) ) {
 			return $object;
 		}
 
 		$baseResource = __NAMESPACE__ . '\\' . $resource;
-		$class = (class_exists( $baseResource )) ? $baseResource : 'Bigcommerce\\Api\\Resources\\' . $resource;
+		$class        = ( class_exists( $baseResource ) ) ? $baseResource : 'Bigcommerce\\Api\\Resources\\' . $resource;
 
 		return new $class( $object );
 	}
@@ -389,10 +379,10 @@ class BCClient
 	 * Map object representing a count to an integer value.
 	 *
 	 * @param \stdClass $object
+	 *
 	 * @return int
 	 */
-	private static function mapCount( $object )
-	{
+	private static function mapCount( $object ) {
 		if ( $object == false || is_string( $object ) ) {
 			return $object;
 		}
@@ -404,36 +394,35 @@ class BCClient
 	 * Swaps a temporary access code for a long expiry auth token.
 	 *
 	 * @param \stdClass $object
+	 *
 	 * @return \stdClass
 	 */
-	public static function getAuthToken( $object )
-	{
-		$context = array_merge( array( 'grant_type' => 'authorization_code' ), (array)$object );
+	public static function getAuthToken( $object ) {
+		$context    = array_merge( array( 'grant_type' => 'authorization_code' ), (array) $object );
 		$connection = new Connection();
 
 		return $connection->post( self::$login_url . '/oauth2/token', $context );
 	}
 
-	public static function getCustomerLoginToken( $id, $redirectUrl = '', $requestIp = '' )
-	{
+	public static function getCustomerLoginToken( $id, $redirectUrl = '', $requestIp = '' ) {
 		if ( empty( self::$client_secret ) ) {
 			throw new Exception( 'Cannot sign customer login tokens without a client secret' );
 		}
 
 		$payload = array(
-			'iss' => self::$client_id,
-			'iat' => time(),
-			'jti' => bin2hex( random_bytes( 32 ) ),
-			'operation' => 'customer_login',
-			'store_hash' => self::$store_hash,
+			'iss'         => self::$client_id,
+			'iat'         => time(),
+			'jti'         => bin2hex( random_bytes( 32 ) ),
+			'operation'   => 'customer_login',
+			'store_hash'  => self::$store_hash,
 			'customer_id' => $id
 		);
 
-		if ( !empty( $redirectUrl ) ) {
+		if ( ! empty( $redirectUrl ) ) {
 			$payload['redirect_to'] = $redirectUrl;
 		}
 
-		if ( !empty( $requestIp ) ) {
+		if ( ! empty( $requestIp ) ) {
 			$payload['request_ip'] = $requestIp;
 		}
 
@@ -445,8 +434,7 @@ class BCClient
 	 *
 	 * @return \DateTime
 	 */
-	public static function getTime()
-	{
+	public static function getTime() {
 		$response = self::connection()->get( self::$api_path . '/time' );
 
 		if ( $response == false || is_string( $response ) ) {
@@ -460,11 +448,12 @@ class BCClient
 	 * Returns the default collection of products.
 	 *
 	 * @param array $filter
+	 *
 	 * @return mixed array|string list of products or XML string if useXml is true
 	 */
-	public static function getProducts( $filter = array() )
-	{
+	public static function getProducts( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/products' . $filter->toQuery(), 'Product' );
 	}
 
@@ -472,10 +461,10 @@ class BCClient
 	 * Gets collection of images for a product.
 	 *
 	 * @param int $id product id
+	 *
 	 * @return mixed array|string list of products or XML string if useXml is true
 	 */
-	public static function getProductImages( $id )
-	{
+	public static function getProductImages( $id ) {
 		return self::getCollection( '/products/' . $id . '/images/', 'ProductImage' );
 	}
 
@@ -483,21 +472,22 @@ class BCClient
 	 * Gets collection of custom fields for a product.
 	 *
 	 * @param int $id product ID
+	 *
 	 * @return array|string list of products or XML string if useXml is true
 	 */
-	public static function getProductCustomFields( $id )
-	{
+	public static function getProductCustomFields( $id ) {
 		return self::getCollection( '/products/' . $id . '/customfields/', 'ProductCustomField' );
 	}
 
 	/**
 	 * Returns a single custom field by given id
+	 *
 	 * @param  int $product_id product id
 	 * @param  int $id custom field id
+	 *
 	 * @return Resources\ProductCustomField|bool Returns ProductCustomField if exists, false if not exists
 	 */
-	public static function getProductCustomField( $product_id, $id )
-	{
+	public static function getProductCustomField( $product_id, $id ) {
 		return self::getResource( '/products/' . $product_id . '/customfields/' . $id, 'ProductCustomField' );
 	}
 
@@ -506,10 +496,10 @@ class BCClient
 	 *
 	 * @param int $product_id product id
 	 * @param mixed $object fields to create
+	 *
 	 * @return Object Object with `id`, `product_id`, `name` and `text` keys
 	 */
-	public static function createProductCustomField( $product_id, $object )
-	{
+	public static function createProductCustomField( $product_id, $object ) {
 		return self::createResource( '/products/' . $product_id . '/customfields', $object );
 	}
 
@@ -517,10 +507,10 @@ class BCClient
 	 * Gets collection of reviews for a product.
 	 *
 	 * @param $id
+	 *
 	 * @return mixed
 	 */
-	public static function getProductReviews( $id )
-	{
+	public static function getProductReviews( $id ) {
 		return self::getCollection( '/products/' . $id . '/reviews/', 'ProductReview' );
 	}
 
@@ -530,10 +520,10 @@ class BCClient
 	 * @param int $product_id product id
 	 * @param int $id custom field id
 	 * @param mixed $object custom field to update
+	 *
 	 * @return mixed
 	 */
-	public static function updateProductCustomField( $product_id, $id, $object )
-	{
+	public static function updateProductCustomField( $product_id, $id, $object ) {
 		return self::updateResource( '/products/' . $product_id . '/customfields/' . $id, $object );
 	}
 
@@ -542,10 +532,10 @@ class BCClient
 	 *
 	 * @param int $product_id product id
 	 * @param int $id custom field id
+	 *
 	 * @return mixed
 	 */
-	public static function deleteProductCustomField( $product_id, $id )
-	{
+	public static function deleteProductCustomField( $product_id, $id ) {
 		return self::deleteResource( '/products/' . $product_id . '/customfields/' . $id );
 	}
 
@@ -553,11 +543,12 @@ class BCClient
 	 * Returns the total number of products in the collection.
 	 *
 	 * @param array $filter
+	 *
 	 * @return int|string number of products or XML string if useXml is true
 	 */
-	public static function getProductsCount( $filter = array() )
-	{
+	public static function getProductsCount( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCount( '/products/count' . $filter->toQuery() );
 	}
 
@@ -565,10 +556,10 @@ class BCClient
 	 * Returns a single product resource by the given id.
 	 *
 	 * @param int $id product id
+	 *
 	 * @return Resources\Product|string
 	 */
-	public static function getProduct( $id )
-	{
+	public static function getProduct( $id ) {
 		return self::getResource( '/products/' . $id, 'Product' );
 	}
 
@@ -576,10 +567,10 @@ class BCClient
 	 * Create a new product.
 	 *
 	 * @param mixed $object fields to create
+	 *
 	 * @return mixed
 	 */
-	public static function createProduct( $object )
-	{
+	public static function createProduct( $object ) {
 		return self::createResource( '/products', $object );
 	}
 
@@ -588,10 +579,10 @@ class BCClient
 	 *
 	 * @param int $id product id
 	 * @param mixed $object fields to update
+	 *
 	 * @return mixed
 	 */
-	public static function updateProduct( $id, $object )
-	{
+	public static function updateProduct( $id, $object ) {
 		return self::updateResource( '/products/' . $id, $object );
 	}
 
@@ -599,10 +590,10 @@ class BCClient
 	 * Delete the given product.
 	 *
 	 * @param int $id product id
+	 *
 	 * @return mixed
 	 */
-	public static function deleteProduct( $id )
-	{
+	public static function deleteProduct( $id ) {
 		return self::deleteResource( '/products/' . $id );
 	}
 
@@ -611,8 +602,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function deleteAllProducts()
-	{
+	public static function deleteAllProducts() {
 		return self::deleteResource( '/products' );
 	}
 
@@ -620,21 +610,23 @@ class BCClient
 	 * Return the collection of options.
 	 *
 	 * @param array $filter
+	 *
 	 * @return array
 	 */
-	public static function getOptions( $filter = array() )
-	{
+	public static function getOptions( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/options' . $filter->toQuery(), 'Option' );
 	}
 
 	/**
 	 * Create Options
+	 *
 	 * @param $object
+	 *
 	 * @return mixed
 	 */
-	public static function createOption( $object )
-	{
+	public static function createOption( $object ) {
 		return self::createResource( '/options', $object );
 	}
 
@@ -643,10 +635,10 @@ class BCClient
 	 *
 	 * @param int $id category id
 	 * @param mixed $object
+	 *
 	 * @return mixed
 	 */
-	public static function updateOption( $id, $object )
-	{
+	public static function updateOption( $id, $object ) {
 		return self::updateResource( '/options/' . $id, $object );
 	}
 
@@ -655,8 +647,7 @@ class BCClient
 	 *
 	 * @return int
 	 */
-	public static function getOptionsCount()
-	{
+	public static function getOptionsCount() {
 		return self::getCount( '/options/count' );
 	}
 
@@ -664,10 +655,10 @@ class BCClient
 	 * Return a single option by given id.
 	 *
 	 * @param int $id option id
+	 *
 	 * @return Resources\Option
 	 */
-	public static function getOption( $id )
-	{
+	public static function getOption( $id ) {
 		return self::getResource( '/options/' . $id, 'Option' );
 	}
 
@@ -675,10 +666,10 @@ class BCClient
 	 * Delete the given option.
 	 *
 	 * @param int $id option id
+	 *
 	 * @return mixed
 	 */
-	public static function deleteOption( $id )
-	{
+	public static function deleteOption( $id ) {
 		return self::deleteResource( '/options/' . $id );
 	}
 
@@ -687,10 +678,10 @@ class BCClient
 	 *
 	 * @param int $option_id option id
 	 * @param int $id value id
+	 *
 	 * @return Resources\OptionValue
 	 */
-	public static function getOptionValue( $option_id, $id )
-	{
+	public static function getOptionValue( $option_id, $id ) {
 		return self::getResource( '/options/' . $option_id . '/values/' . $id, 'OptionValue' );
 	}
 
@@ -698,11 +689,12 @@ class BCClient
 	 * Return the collection of all option values.
 	 *
 	 * @param array $filter
+	 *
 	 * @return array
 	 */
-	public static function getOptionValues( $filter = array() )
-	{
+	public static function getOptionValues( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/options/values' . $filter->toQuery(), 'OptionValue' );
 	}
 
@@ -710,11 +702,12 @@ class BCClient
 	 * The collection of categories.
 	 *
 	 * @param array $filter
+	 *
 	 * @return array
 	 */
-	public static function getCategories( $filter = array() )
-	{
+	public static function getCategories( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/categories' . $filter->toQuery(), 'Category' );
 	}
 
@@ -722,11 +715,12 @@ class BCClient
 	 * The number of categories in the collection.
 	 *
 	 * @param array $filter
+	 *
 	 * @return int
 	 */
-	public static function getCategoriesCount( $filter = array() )
-	{
+	public static function getCategoriesCount( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCount( '/categories/count' . $filter->toQuery() );
 	}
 
@@ -734,10 +728,10 @@ class BCClient
 	 * A single category by given id.
 	 *
 	 * @param int $id category id
+	 *
 	 * @return Resources\Category
 	 */
-	public static function getCategory( $id )
-	{
+	public static function getCategory( $id ) {
 		return self::getResource( '/categories/' . $id, 'Category' );
 	}
 
@@ -745,10 +739,10 @@ class BCClient
 	 * Create a new category from the given data.
 	 *
 	 * @param mixed $object
+	 *
 	 * @return mixed
 	 */
-	public static function createCategory( $object )
-	{
+	public static function createCategory( $object ) {
 		return self::createResource( '/categories', $object );
 	}
 
@@ -757,10 +751,10 @@ class BCClient
 	 *
 	 * @param int $id category id
 	 * @param mixed $object
+	 *
 	 * @return mixed
 	 */
-	public static function updateCategory( $id, $object )
-	{
+	public static function updateCategory( $id, $object ) {
 		return self::updateResource( '/categories/' . $id, $object );
 	}
 
@@ -768,10 +762,10 @@ class BCClient
 	 * Delete the given category.
 	 *
 	 * @param int $id category id
+	 *
 	 * @return mixed
 	 */
-	public static function deleteCategory( $id )
-	{
+	public static function deleteCategory( $id ) {
 		return self::deleteResource( '/categories/' . $id );
 	}
 
@@ -780,8 +774,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function deleteAllCategories()
-	{
+	public static function deleteAllCategories() {
 		return self::deleteResource( '/categories' );
 	}
 
@@ -789,11 +782,12 @@ class BCClient
 	 * The collection of brands.
 	 *
 	 * @param array $filter
+	 *
 	 * @return array
 	 */
-	public static function getBrands( $filter = array() )
-	{
+	public static function getBrands( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/brands' . $filter->toQuery(), 'Brand' );
 	}
 
@@ -801,11 +795,12 @@ class BCClient
 	 * The total number of brands in the collection.
 	 *
 	 * @param array $filter
+	 *
 	 * @return int
 	 */
-	public static function getBrandsCount( $filter = array() )
-	{
+	public static function getBrandsCount( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCount( '/brands/count' . $filter->toQuery() );
 	}
 
@@ -813,10 +808,10 @@ class BCClient
 	 * A single brand by given id.
 	 *
 	 * @param int $id brand id
+	 *
 	 * @return Resources\Brand
 	 */
-	public static function getBrand( $id )
-	{
+	public static function getBrand( $id ) {
 		return self::getResource( '/brands/' . $id, 'Brand' );
 	}
 
@@ -824,10 +819,10 @@ class BCClient
 	 * Create a new brand from the given data.
 	 *
 	 * @param mixed $object
+	 *
 	 * @return mixed
 	 */
-	public static function createBrand( $object )
-	{
+	public static function createBrand( $object ) {
 		return self::createResource( '/brands', $object );
 	}
 
@@ -836,10 +831,10 @@ class BCClient
 	 *
 	 * @param int $id brand id
 	 * @param mixed $object
+	 *
 	 * @return mixed
 	 */
-	public static function updateBrand( $id, $object )
-	{
+	public static function updateBrand( $id, $object ) {
 		return self::updateResource( '/brands/' . $id, $object );
 	}
 
@@ -847,10 +842,10 @@ class BCClient
 	 * Delete the given brand.
 	 *
 	 * @param int $id brand id
+	 *
 	 * @return mixed
 	 */
-	public static function deleteBrand( $id )
-	{
+	public static function deleteBrand( $id ) {
 		return self::deleteResource( '/brands/' . $id );
 	}
 
@@ -859,8 +854,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function deleteAllBrands()
-	{
+	public static function deleteAllBrands() {
 		return self::deleteResource( '/brands' );
 	}
 
@@ -868,11 +862,12 @@ class BCClient
 	 * The collection of orders.
 	 *
 	 * @param array $filter
+	 *
 	 * @return array
 	 */
-	public static function getOrders( $filter = array() )
-	{
+	public static function getOrders( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/orders' . $filter->toQuery(), 'Order' );
 	}
 
@@ -880,11 +875,12 @@ class BCClient
 	 * The number of orders in the collection.
 	 *
 	 * @param array $filter
+	 *
 	 * @return int
 	 */
-	public static function getOrdersCount( $filter = array() )
-	{
+	public static function getOrdersCount( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCount( '/orders/count' . $filter->toQuery() );
 	}
 
@@ -892,12 +888,13 @@ class BCClient
 	 * The order count grouped by order status
 	 *
 	 * @param array $filter
+	 *
 	 * @return Resources\OrderStatus
 	 */
-	public static function getOrderStatusesWithCounts( $filter = array() )
-	{
-		$filter = Filter::create( $filter );
+	public static function getOrderStatusesWithCounts( $filter = array() ) {
+		$filter   = Filter::create( $filter );
 		$resource = self::getResource( '/orders/count' . $filter->toQuery(), "OrderStatus" );
+
 		return $resource->statuses;
 	}
 
@@ -905,19 +902,19 @@ class BCClient
 	 * A single order.
 	 *
 	 * @param int $id order id
+	 *
 	 * @return Resources\Order
 	 */
-	public static function getOrder( $id )
-	{
+	public static function getOrder( $id ) {
 		return self::getResource( '/orders/' . $id, 'Order' );
 	}
 
 	/**
 	 * @param $orderID
+	 *
 	 * @return mixed
 	 */
-	public static function getOrderProducts( $orderID )
-	{
+	public static function getOrderProducts( $orderID ) {
 		return self::getCollection( '/orders/' . $orderID . '/products', 'OrderProduct' );
 	}
 
@@ -926,11 +923,12 @@ class BCClient
 	 *
 	 * @param $orderID
 	 * @param array $filter
+	 *
 	 * @return mixed
 	 */
-	public static function getOrderProductsCount( $orderID, $filter = array() )
-	{
+	public static function getOrderProductsCount( $orderID, $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCount( '/orders/' . $orderID . '/products/count' . $filter->toQuery() );
 	}
 
@@ -939,10 +937,10 @@ class BCClient
 	 * delete the order).
 	 *
 	 * @param int $id order id
+	 *
 	 * @return mixed
 	 */
-	public static function deleteOrder( $id )
-	{
+	public static function deleteOrder( $id ) {
 		return self::deleteResource( '/orders/' . $id );
 	}
 
@@ -951,8 +949,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function deleteAllOrders()
-	{
+	public static function deleteAllOrders() {
 		return self::deleteResource( '/orders' );
 	}
 
@@ -960,10 +957,10 @@ class BCClient
 	 * Create an order
 	 *
 	 * @param $object
+	 *
 	 * @return mixed
 	 */
-	public static function createOrder( $object )
-	{
+	public static function createOrder( $object ) {
 		return self::createResource( '/orders', $object );
 	}
 
@@ -972,10 +969,10 @@ class BCClient
 	 *
 	 * @param int $id order id
 	 * @param mixed $object fields to update
+	 *
 	 * @return mixed
 	 */
-	public static function updateOrder( $id, $object )
-	{
+	public static function updateOrder( $id, $object ) {
 		return self::updateResource( '/orders/' . $id, $object );
 	}
 
@@ -983,11 +980,12 @@ class BCClient
 	 * The list of customers.
 	 *
 	 * @param array $filter
+	 *
 	 * @return array
 	 */
-	public static function getCustomers( $filter = array() )
-	{
+	public static function getCustomers( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/customers' . $filter->toQuery(), 'Customer' );
 	}
 
@@ -995,11 +993,12 @@ class BCClient
 	 * The total number of customers in the collection.
 	 *
 	 * @param array $filter
+	 *
 	 * @return int
 	 */
-	public static function getCustomersCount( $filter = array() )
-	{
+	public static function getCustomersCount( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCount( '/customers/count' . $filter->toQuery() );
 	}
 
@@ -1007,11 +1006,12 @@ class BCClient
 	 * Bulk delete customers.
 	 *
 	 * @param array $filter
+	 *
 	 * @return array
 	 */
-	public static function deleteCustomers( $filter = array() )
-	{
+	public static function deleteCustomers( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::deleteResource( '/customers' . $filter->toQuery() );
 	}
 
@@ -1019,10 +1019,10 @@ class BCClient
 	 * A single customer by given id.
 	 *
 	 * @param int $id customer id
+	 *
 	 * @return Resources\Customer
 	 */
-	public static function getCustomer( $id )
-	{
+	public static function getCustomer( $id ) {
 		return self::getResource( '/customers/' . $id, 'Customer' );
 	}
 
@@ -1030,10 +1030,10 @@ class BCClient
 	 * Create a new customer from the given data.
 	 *
 	 * @param mixed $object
+	 *
 	 * @return mixed
 	 */
-	public static function createCustomer( $object )
-	{
+	public static function createCustomer( $object ) {
 		return self::createResource( '/customers', $object );
 	}
 
@@ -1042,10 +1042,10 @@ class BCClient
 	 *
 	 * @param int $id customer id
 	 * @param mixed $object
+	 *
 	 * @return mixed
 	 */
-	public static function updateCustomer( $id, $object )
-	{
+	public static function updateCustomer( $id, $object ) {
 		return self::updateResource( '/customers/' . $id, $object );
 	}
 
@@ -1053,10 +1053,10 @@ class BCClient
 	 * Delete the given customer.
 	 *
 	 * @param int $id customer id
+	 *
 	 * @return mixed
 	 */
-	public static function deleteCustomer( $id )
-	{
+	public static function deleteCustomer( $id ) {
 		return self::deleteResource( '/customers/' . $id );
 	}
 
@@ -1064,10 +1064,10 @@ class BCClient
 	 * A list of addresses belonging to the given customer.
 	 *
 	 * @param int $id customer id
+	 *
 	 * @return array
 	 */
-	public static function getCustomerAddresses( $id )
-	{
+	public static function getCustomerAddresses( $id ) {
 		return self::getCollection( '/customers/' . $id . '/addresses', 'Address' );
 	}
 
@@ -1075,11 +1075,12 @@ class BCClient
 	 * Returns the collection of option sets.
 	 *
 	 * @param array $filter
+	 *
 	 * @return array
 	 */
-	public static function getOptionSets( $filter = array() )
-	{
+	public static function getOptionSets( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/optionsets' . $filter->toQuery(), 'OptionSet' );
 	}
 
@@ -1087,10 +1088,10 @@ class BCClient
 	 * Create Optionsets
 	 *
 	 * @param $object
+	 *
 	 * @return mixed
 	 */
-	public static function createOptionSet( $object )
-	{
+	public static function createOptionSet( $object ) {
 		return self::createResource( '/optionsets', $object );
 	}
 
@@ -1099,10 +1100,10 @@ class BCClient
 	 *
 	 * @param $object
 	 * @param $id
+	 *
 	 * @return mixed
 	 */
-	public static function createOptionSetOption( $object, $id )
-	{
+	public static function createOptionSetOption( $object, $id ) {
 		return self::createResource( '/optionsets/' . $id . '/options', $object );
 	}
 
@@ -1111,8 +1112,7 @@ class BCClient
 	 *
 	 * @return int
 	 */
-	public static function getOptionSetsCount()
-	{
+	public static function getOptionSetsCount() {
 		return self::getCount( '/optionsets/count' );
 	}
 
@@ -1120,10 +1120,10 @@ class BCClient
 	 * A single option set by given id.
 	 *
 	 * @param int $id option set id
+	 *
 	 * @return Resources\OptionSet
 	 */
-	public static function getOptionSet( $id )
-	{
+	public static function getOptionSet( $id ) {
 		return self::getResource( '/optionsets/' . $id, 'OptionSet' );
 	}
 
@@ -1132,10 +1132,10 @@ class BCClient
 	 *
 	 * @param int $id option set id
 	 * @param mixed $object
+	 *
 	 * @return mixed
 	 */
-	public static function updateOptionSet( $id, $object )
-	{
+	public static function updateOptionSet( $id, $object ) {
 		return self::updateResource( '/optionsets/' . $id, $object );
 	}
 
@@ -1143,10 +1143,10 @@ class BCClient
 	 * Delete the given option set.
 	 *
 	 * @param int $id option id
+	 *
 	 * @return mixed
 	 */
-	public static function deleteOptionSet( $id )
-	{
+	public static function deleteOptionSet( $id ) {
 		Client::deleteResource( '/optionsets/' . $id );
 	}
 
@@ -1157,8 +1157,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function getOrderStatus( $id )
-	{
+	public static function getOrderStatus( $id ) {
 		return self::getResource( '/order_statuses/' . $id, 'OrderStatus' );
 	}
 
@@ -1167,8 +1166,7 @@ class BCClient
 	 *
 	 * @return array
 	 */
-	public static function getOrderStatuses()
-	{
+	public static function getOrderStatuses() {
 		return self::getCollection( '/order_statuses', 'OrderStatus' );
 	}
 
@@ -1176,11 +1174,12 @@ class BCClient
 	 * Get collection of product skus
 	 *
 	 * @param array $filter
+	 *
 	 * @return mixed
 	 */
-	public static function getSkus( $filter = array() )
-	{
+	public static function getSkus( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/products/skus' . $filter->toQuery(), 'Sku' );
 	}
 
@@ -1189,10 +1188,10 @@ class BCClient
 	 *
 	 * @param $productId
 	 * @param $object
+	 *
 	 * @return mixed
 	 */
-	public static function createSku( $productId, $object )
-	{
+	public static function createSku( $productId, $object ) {
 		return self::createResource( '/products/' . $productId . '/skus', $object );
 	}
 
@@ -1201,10 +1200,10 @@ class BCClient
 	 *
 	 * @param $id
 	 * @param $object
+	 *
 	 * @return mixed
 	 */
-	public static function updateSku( $id, $object )
-	{
+	public static function updateSku( $id, $object ) {
 		return self::updateResource( '/product/skus/' . $id, $object );
 	}
 
@@ -1213,8 +1212,7 @@ class BCClient
 	 *
 	 * @return int
 	 */
-	public static function getSkusCount()
-	{
+	public static function getSkusCount() {
 		return self::getCount( '/products/skus/count' );
 	}
 
@@ -1222,10 +1220,10 @@ class BCClient
 	 * Get a single coupon by given id.
 	 *
 	 * @param int $id customer id
+	 *
 	 * @return Resources\Coupon
 	 */
-	public static function getCoupon( $id )
-	{
+	public static function getCoupon( $id ) {
 		return self::getResource( '/coupons/' . $id, 'Coupon' );
 	}
 
@@ -1233,11 +1231,12 @@ class BCClient
 	 * Get coupons
 	 *
 	 * @param array $filter
+	 *
 	 * @return mixed
 	 */
-	public static function getCoupons( $filter = array() )
-	{
+	public static function getCoupons( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/coupons' . $filter->toQuery(), 'Coupon' );
 	}
 
@@ -1245,10 +1244,10 @@ class BCClient
 	 * Create coupon
 	 *
 	 * @param $object
+	 *
 	 * @return mixed
 	 */
-	public static function createCoupon( $object )
-	{
+	public static function createCoupon( $object ) {
 		return self::createResource( '/coupons', $object );
 	}
 
@@ -1257,10 +1256,10 @@ class BCClient
 	 *
 	 * @param $id
 	 * @param $object
+	 *
 	 * @return mixed
 	 */
-	public static function updateCoupon( $id, $object )
-	{
+	public static function updateCoupon( $id, $object ) {
 		return self::updateResource( '/coupons/' . $id, $object );
 	}
 
@@ -1268,10 +1267,10 @@ class BCClient
 	 * Delete the given coupon.
 	 *
 	 * @param int $id coupon id
+	 *
 	 * @return mixed
 	 */
-	public static function deleteCoupon( $id )
-	{
+	public static function deleteCoupon( $id ) {
 		return self::deleteResource( '/coupons/' . $id );
 	}
 
@@ -1280,8 +1279,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function deleteAllCoupons()
-	{
+	public static function deleteAllCoupons() {
 		return self::deleteResource( '/coupons' );
 	}
 
@@ -1290,22 +1288,20 @@ class BCClient
 	 *
 	 * @return int
 	 */
-	public static function getCouponsCount()
-	{
+	public static function getCouponsCount() {
 		return self::getCount( '/coupons/count' );
 	}
 
 	/**
 	 * The request logs with usage history statistics.
 	 */
-	public static function getRequestLogs()
-	{
+	public static function getRequestLogs() {
 		return self::getCollection( '/requestlogs', 'RequestLog' );
 	}
 
-	public static function getStore()
-	{
+	public static function getStore() {
 		$response = self::connection()->get( self::$api_path . '/store' );
+
 		return $response;
 	}
 
@@ -1316,21 +1312,20 @@ class BCClient
 	 *
 	 * @return int
 	 */
-	public static function getRequestsRemaining()
-	{
+	public static function getRequestsRemaining() {
 		$limit = self::connection()->getHeader( 'X-BC-ApiLimit-Remaining' );
 
-		if ( !$limit ) {
+		if ( ! $limit ) {
 			$result = self::getTime();
 
-			if ( !$result ) {
+			if ( ! $result ) {
 				return false;
 			}
 
 			$limit = self::connection()->getHeader( 'X-BC-ApiLimit-Remaining' );
 		}
 
-		return (int)$limit;
+		return (int) $limit;
 	}
 
 	/**
@@ -1338,10 +1333,10 @@ class BCClient
 	 *
 	 * @param $orderID
 	 * @param $shipmentID
+	 *
 	 * @return mixed
 	 */
-	public static function getShipment( $orderID, $shipmentID )
-	{
+	public static function getShipment( $orderID, $shipmentID ) {
 		return self::getResource( '/orders/' . $orderID . '/shipments/' . $shipmentID, 'Shipment' );
 	}
 
@@ -1350,11 +1345,12 @@ class BCClient
 	 *
 	 * @param $orderID
 	 * @param array $filter
+	 *
 	 * @return mixed
 	 */
-	public static function getShipments( $orderID, $filter = array() )
-	{
+	public static function getShipments( $orderID, $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/orders/' . $orderID . '/shipments' . $filter->toQuery(), 'Shipment' );
 	}
 
@@ -1363,10 +1359,10 @@ class BCClient
 	 *
 	 * @param $orderID
 	 * @param $object
+	 *
 	 * @return mixed
 	 */
-	public static function createShipment( $orderID, $object )
-	{
+	public static function createShipment( $orderID, $object ) {
 		return self::createResource( '/orders/' . $orderID . '/shipments', $object );
 	}
 
@@ -1376,10 +1372,10 @@ class BCClient
 	 * @param $orderID
 	 * @param $shipmentID
 	 * @param $object
+	 *
 	 * @return mixed
 	 */
-	public static function updateShipment( $orderID, $shipmentID, $object )
-	{
+	public static function updateShipment( $orderID, $shipmentID, $object ) {
 		return self::updateResource( '/orders/' . $orderID . '/shipments/' . $shipmentID, $object );
 	}
 
@@ -1388,10 +1384,10 @@ class BCClient
 	 *
 	 * @param $orderID
 	 * @param $shipmentID
+	 *
 	 * @return mixed
 	 */
-	public static function deleteShipment( $orderID, $shipmentID )
-	{
+	public static function deleteShipment( $orderID, $shipmentID ) {
 		return self::deleteResource( '/orders/' . $orderID . '/shipments/' . $shipmentID );
 	}
 
@@ -1399,10 +1395,10 @@ class BCClient
 	 * Delete all Shipments for the given order.
 	 *
 	 * @param $orderID
+	 *
 	 * @return mixed
 	 */
-	public static function deleteAllShipmentsForOrder( $orderID )
-	{
+	public static function deleteAllShipmentsForOrder( $orderID ) {
 		return self::deleteResource( '/orders/' . $orderID . '/shipments' );
 	}
 
@@ -1411,10 +1407,10 @@ class BCClient
 	 *
 	 * @param $orderID
 	 * @param $orderShippingAddressID
+	 *
 	 * @return mixed
 	 */
-	public static function getOrderShippingAddress( $orderID, $orderShippingAddressID )
-	{
+	public static function getOrderShippingAddress( $orderID, $orderShippingAddressID ) {
 		return self::getResource( '/orders/' . $orderID . '/shipping_addresses/' . $orderShippingAddressID, 'Address' );
 	}
 
@@ -1423,11 +1419,12 @@ class BCClient
 	 *
 	 * @param $orderID
 	 * @param array $filter
+	 *
 	 * @return mixed
 	 */
-	public static function getOrderShippingAddresses( $orderID, $filter = array() )
-	{
+	public static function getOrderShippingAddresses( $orderID, $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/orders/' . $orderID . '/shipping_addresses' . $filter->toQuery(), 'Address' );
 	}
 
@@ -1435,10 +1432,10 @@ class BCClient
 	 * Create a new currency.
 	 *
 	 * @param mixed $object fields to create
+	 *
 	 * @return mixed
 	 */
-	public static function createCurrency( $object )
-	{
+	public static function createCurrency( $object ) {
 		return self::createResource( '/currencies', $object );
 	}
 
@@ -1446,10 +1443,10 @@ class BCClient
 	 * Returns a single currency resource by the given id.
 	 *
 	 * @param int $id currency id
+	 *
 	 * @return Resources\Currency|string
 	 */
-	public static function getCurrency( $id )
-	{
+	public static function getCurrency( $id ) {
 		return self::getResource( '/currencies/' . $id, 'Currency' );
 	}
 
@@ -1458,10 +1455,10 @@ class BCClient
 	 *
 	 * @param int $id currency id
 	 * @param mixed $object fields to update
+	 *
 	 * @return mixed
 	 */
-	public static function updateCurrency( $id, $object )
-	{
+	public static function updateCurrency( $id, $object ) {
 		return self::updateResource( '/currencies/' . $id, $object );
 	}
 
@@ -1469,10 +1466,10 @@ class BCClient
 	 * Delete the given currency.
 	 *
 	 * @param int $id currency id
+	 *
 	 * @return mixed
 	 */
-	public static function deleteCurrency( $id )
-	{
+	public static function deleteCurrency( $id ) {
 		return self::deleteResource( '/currencies/' . $id );
 	}
 
@@ -1480,11 +1477,12 @@ class BCClient
 	 * Returns the default collection of currencies.
 	 *
 	 * @param array $filter
+	 *
 	 * @return mixed array|string list of currencies or XML string if useXml is true
 	 */
-	public static function getCurrencies( $filter = array() )
-	{
+	public static function getCurrencies( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/currencies' . $filter->toQuery(), 'Currency' );
 	}
 
@@ -1493,10 +1491,10 @@ class BCClient
 	 *
 	 * @param string $productId
 	 * @param mixed $object
+	 *
 	 * @return mixed
 	 */
-	public static function createProductImage( $productId, $object )
-	{
+	public static function createProductImage( $productId, $object ) {
 		return self::createResource( '/products/' . $productId . '/images', $object );
 	}
 
@@ -1506,10 +1504,10 @@ class BCClient
 	 * @param string $productId
 	 * @param string $imageId
 	 * @param mixed $object
+	 *
 	 * @return mixed
 	 */
-	public static function updateProductImage( $productId, $imageId, $object )
-	{
+	public static function updateProductImage( $productId, $imageId, $object ) {
 		return self::updateResource( '/products/' . $productId . '/images/' . $imageId, $object );
 	}
 
@@ -1518,10 +1516,10 @@ class BCClient
 	 *
 	 * @param int $productId
 	 * @param int $imageId
+	 *
 	 * @return Resources\ProductImage|string
 	 */
-	public static function getProductImage( $productId, $imageId )
-	{
+	public static function getProductImage( $productId, $imageId ) {
 		return self::getResource( '/products/' . $productId . '/images/' . $imageId, 'ProductImage' );
 	}
 
@@ -1530,10 +1528,10 @@ class BCClient
 	 *
 	 * @param int $productId
 	 * @param int $imageId
+	 *
 	 * @return mixed
 	 */
-	public static function deleteProductImage( $productId, $imageId )
-	{
+	public static function deleteProductImage( $productId, $imageId ) {
 		return self::deleteResource( '/products/' . $productId . '/images/' . $imageId );
 	}
 
@@ -1542,8 +1540,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function getPages()
-	{
+	public static function getPages() {
 		return self::getCollection( '/pages', 'Page' );
 	}
 
@@ -1551,10 +1548,10 @@ class BCClient
 	 * Get single content pages
 	 *
 	 * @param int $pageId
+	 *
 	 * @return mixed
 	 */
-	public static function getPage( $pageId )
-	{
+	public static function getPage( $pageId ) {
 		return self::getResource( '/pages/' . $pageId, 'Page' );
 	}
 
@@ -1562,10 +1559,10 @@ class BCClient
 	 * Create a new content pages
 	 *
 	 * @param $object
+	 *
 	 * @return mixed
 	 */
-	public static function createPage( $object )
-	{
+	public static function createPage( $object ) {
 		return self::createResource( '/pages', $object );
 	}
 
@@ -1574,10 +1571,10 @@ class BCClient
 	 *
 	 * @param int $pageId
 	 * @param $object
+	 *
 	 * @return mixed
 	 */
-	public static function updatePage( $pageId, $object )
-	{
+	public static function updatePage( $pageId, $object ) {
 		return self::updateResource( '/pages/' . $pageId, $object );
 	}
 
@@ -1585,10 +1582,10 @@ class BCClient
 	 * Delete an existing content page
 	 *
 	 * @param int $pageId
+	 *
 	 * @return mixed
 	 */
-	public static function deletePage( $pageId )
-	{
+	public static function deletePage( $pageId ) {
 		return self::deleteResource( '/pages/' . $pageId );
 	}
 
@@ -1596,10 +1593,10 @@ class BCClient
 	 * Create a Gift Certificate
 	 *
 	 * @param array $object
+	 *
 	 * @return mixed
 	 */
-	public static function createGiftCertificate( $object )
-	{
+	public static function createGiftCertificate( $object ) {
 		return self::createResource( '/gift_certificates', $object );
 	}
 
@@ -1607,10 +1604,10 @@ class BCClient
 	 * Get a Gift Certificate
 	 *
 	 * @param int $giftCertificateId
+	 *
 	 * @return mixed
 	 */
-	public static function getGiftCertificate( $giftCertificateId )
-	{
+	public static function getGiftCertificate( $giftCertificateId ) {
 		return self::getResource( '/gift_certificates/' . $giftCertificateId );
 	}
 
@@ -1618,11 +1615,12 @@ class BCClient
 	 * Return the collection of all gift certificates.
 	 *
 	 * @param array $filter
+	 *
 	 * @return mixed
 	 */
-	public static function getGiftCertificates( $filter = array() )
-	{
+	public static function getGiftCertificates( $filter = array() ) {
 		$filter = Filter::create( $filter );
+
 		return self::getCollection( '/gift_certificates' . $filter->toQuery() );
 	}
 
@@ -1631,10 +1629,10 @@ class BCClient
 	 *
 	 * @param int $giftCertificateId
 	 * @param array $object
+	 *
 	 * @return mixed
 	 */
-	public static function updateGiftCertificate( $giftCertificateId, $object )
-	{
+	public static function updateGiftCertificate( $giftCertificateId, $object ) {
 		return self::updateResource( '/gift_certificates/' . $giftCertificateId, $object );
 	}
 
@@ -1642,10 +1640,10 @@ class BCClient
 	 * Delete a Gift Certificate
 	 *
 	 * @param int $giftCertificateId
+	 *
 	 * @return mixed
 	 */
-	public static function deleteGiftCertificate( $giftCertificateId )
-	{
+	public static function deleteGiftCertificate( $giftCertificateId ) {
 		return self::deleteResource( '/gift_certificates/' . $giftCertificateId );
 	}
 
@@ -1654,8 +1652,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function deleteAllGiftCertificates()
-	{
+	public static function deleteAllGiftCertificates() {
 		return self::deleteResource( '/gift_certificates' );
 	}
 
@@ -1664,10 +1661,10 @@ class BCClient
 	 *
 	 * @param int $productId
 	 * @param array $object
+	 *
 	 * @return mixed
 	 */
-	public static function createProductReview( $productId, $object )
-	{
+	public static function createProductReview( $productId, $object ) {
 		return self::createResource( '/products/' . $productId . '/reviews', $object );
 	}
 
@@ -1676,10 +1673,10 @@ class BCClient
 	 *
 	 * @param string $productId
 	 * @param array $object
+	 *
 	 * @return mixed
 	 */
-	public static function createProductBulkPricingRules( $productId, $object )
-	{
+	public static function createProductBulkPricingRules( $productId, $object ) {
 		return self::createResource( '/products/' . $productId . '/discount_rules', $object );
 	}
 
@@ -1687,10 +1684,10 @@ class BCClient
 	 * Create a Marketing Banner
 	 *
 	 * @param array $object
+	 *
 	 * @return mixed
 	 */
-	public static function createMarketingBanner( $object )
-	{
+	public static function createMarketingBanner( $object ) {
 		return self::createResource( '/banners', $object );
 	}
 
@@ -1699,8 +1696,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function getMarketingBanners()
-	{
+	public static function getMarketingBanners() {
 		return self::getCollection( '/banners' );
 	}
 
@@ -1709,8 +1705,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function deleteAllMarketingBanners()
-	{
+	public static function deleteAllMarketingBanners() {
 		return self::deleteResource( '/banners' );
 	}
 
@@ -1718,10 +1713,10 @@ class BCClient
 	 * Delete a specific Marketing Banner
 	 *
 	 * @param int $bannerID
+	 *
 	 * @return mixed
 	 */
-	public static function deleteMarketingBanner( $bannerID )
-	{
+	public static function deleteMarketingBanner( $bannerID ) {
 		return self::deleteResource( '/banners/' . $bannerID );
 	}
 
@@ -1730,10 +1725,10 @@ class BCClient
 	 *
 	 * @param int $bannerID
 	 * @param array $object
+	 *
 	 * @return mixed
 	 */
-	public static function updateMarketingBanner( $bannerID, $object )
-	{
+	public static function updateMarketingBanner( $bannerID, $object ) {
 		return self::updateResource( '/banners/' . $bannerID, $object );
 	}
 
@@ -1742,10 +1737,10 @@ class BCClient
 	 *
 	 * @param int $customerID
 	 * @param array $object
+	 *
 	 * @return mixed
 	 */
-	public static function createCustomerAddress( $customerID, $object )
-	{
+	public static function createCustomerAddress( $customerID, $object ) {
 		return self::createResource( '/customers/' . $customerID . '/addresses', $object );
 	}
 
@@ -1754,10 +1749,10 @@ class BCClient
 	 *
 	 * @param int $productID
 	 * @param array $object
+	 *
 	 * @return mixed
 	 */
-	public static function createProductRule( $productID, $object )
-	{
+	public static function createProductRule( $productID, $object ) {
 		return self::createResource( '/products/' . $productID . '/rules', $object );
 	}
 
@@ -1765,10 +1760,10 @@ class BCClient
 	 * Create a customer group.
 	 *
 	 * @param array $object
+	 *
 	 * @return mixed
 	 */
-	public static function createCustomerGroup( $object )
-	{
+	public static function createCustomerGroup( $object ) {
 		return self::createResource( '/customer_groups', $object );
 	}
 
@@ -1777,8 +1772,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function getCustomerGroups()
-	{
+	public static function getCustomerGroups() {
 		return self::getCollection( '/customer_groups' );
 	}
 
@@ -1786,10 +1780,10 @@ class BCClient
 	 * Delete a customer group
 	 *
 	 * @param int $customerGroupId
+	 *
 	 * @return mixed
 	 */
-	public static function deleteCustomerGroup( $customerGroupId )
-	{
+	public static function deleteCustomerGroup( $customerGroupId ) {
 		return self::deleteResource( '/customer_groups/' . $customerGroupId );
 	}
 
@@ -1798,8 +1792,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function deleteAllCustomers()
-	{
+	public static function deleteAllCustomers() {
 		return self::deleteResource( '/customers' );
 	}
 
@@ -1808,8 +1801,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function deleteAllOptions()
-	{
+	public static function deleteAllOptions() {
 		return self::deleteResource( '/options' );
 	}
 
@@ -1817,10 +1809,10 @@ class BCClient
 	 * Return the collection of all option values for a given option.
 	 *
 	 * @param int $productId
+	 *
 	 * @return mixed
 	 */
-	public static function getProductOptions( $productId )
-	{
+	public static function getProductOptions( $productId ) {
 		return self::getCollection( '/products/' . $productId . '/options' );
 	}
 
@@ -1829,10 +1821,10 @@ class BCClient
 	 *
 	 * @param int $productId
 	 * @param int $productOptionId
+	 *
 	 * @return mixed
 	 */
-	public static function getProductOption( $productId, $productOptionId )
-	{
+	public static function getProductOption( $productId, $productOptionId ) {
 		return self::getResource( '/products/' . $productId . '/options/' . $productOptionId );
 	}
 
@@ -1841,10 +1833,10 @@ class BCClient
 	 *
 	 * @param int $productId
 	 * @param int $productRuleId
+	 *
 	 * @return mixed
 	 */
-	public static function getProductRule( $productId, $productRuleId )
-	{
+	public static function getProductRule( $productId, $productRuleId ) {
 		return self::getResource( '/products/' . $productId . '/rules/' . $productRuleId );
 	}
 
@@ -1853,10 +1845,10 @@ class BCClient
 	 *
 	 * @param int $optionId
 	 * @param array $object
+	 *
 	 * @return mixed
 	 */
-	public static function createOptionValue( $optionId, $object )
-	{
+	public static function createOptionValue( $optionId, $object ) {
 		return self::createResource( '/options/' . $optionId . '/values', $object );
 	}
 
@@ -1865,8 +1857,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function deleteAllOptionSets()
-	{
+	public static function deleteAllOptionSets() {
 		return self::deleteResource( '/optionsets' );
 	}
 
@@ -1876,10 +1867,10 @@ class BCClient
 	 * @param int $optionId
 	 * @param int $optionValueId
 	 * @param array $object
+	 *
 	 * @return mixed
 	 */
-	public static function updateOptionValue( $optionId, $optionValueId, $object )
-	{
+	public static function updateOptionValue( $optionId, $optionValueId, $object ) {
 		return self::updateResource(
 			'/options/' . $optionId . '/values/' . $optionValueId,
 			$object
@@ -1891,8 +1882,7 @@ class BCClient
 	 *
 	 * @return mixed Resource|string resource object or XML string if useXml is true
 	 */
-	public static function listWebhooks()
-	{
+	public static function listWebhooks() {
 		return self::getCollection( '/hooks' );
 	}
 
@@ -1900,10 +1890,10 @@ class BCClient
 	 * Returns data for a specific web-hook.
 	 *
 	 * @param int $id
+	 *
 	 * @return mixed Resource|string resource object or XML string if useXml is true
 	 */
-	public static function getWebhook( $id )
-	{
+	public static function getWebhook( $id ) {
 		return self::getResource( '/hooks/' . $id );
 	}
 
@@ -1911,10 +1901,10 @@ class BCClient
 	 * Creates a web-hook.
 	 *
 	 * @param mixed $object object or XML string to create
+	 *
 	 * @return mixed
 	 */
-	public static function createWebhook( $object )
-	{
+	public static function createWebhook( $object ) {
 		return self::createResource( '/hooks', $object );
 	}
 
@@ -1923,10 +1913,10 @@ class BCClient
 	 *
 	 * @param int $id
 	 * @param mixed $object object or XML string to create
+	 *
 	 * @return mixed
 	 */
-	public static function updateWebhook( $id, $object )
-	{
+	public static function updateWebhook( $id, $object ) {
 		return self::updateResource( '/hooks/' . $id, $object );
 	}
 
@@ -1934,10 +1924,10 @@ class BCClient
 	 * Delete the given webhook.
 	 *
 	 * @param int $id
+	 *
 	 * @return mixed
 	 */
-	public static function deleteWebhook( $id )
-	{
+	public static function deleteWebhook( $id ) {
 		return self::deleteResource( '/hooks/' . $id );
 	}
 
@@ -1946,8 +1936,7 @@ class BCClient
 	 *
 	 * @return mixed
 	 */
-	public static function getShippingZones()
-	{
+	public static function getShippingZones() {
 		return self::getCollection( '/shipping/zones/', 'ShippingZone' );
 	}
 
@@ -1955,10 +1944,10 @@ class BCClient
 	 * Return a shipping-zone by id
 	 *
 	 * @param int $id shipping-zone id
+	 *
 	 * @return mixed
 	 */
-	public static function getShippingZone( $id )
-	{
+	public static function getShippingZone( $id ) {
 		return self::getResource( '/shipping/zones/' . $id, 'ShippingZone' );
 	}
 
@@ -1967,10 +1956,10 @@ class BCClient
 	 * Delete the given shipping-zone
 	 *
 	 * @param int $id shipping-zone id
+	 *
 	 * @return mixed
 	 */
-	public static function deleteShippingZone( $id )
-	{
+	public static function deleteShippingZone( $id ) {
 		return self::deleteResource( '/shipping/zones/' . $id );
 	}
 
@@ -1979,10 +1968,10 @@ class BCClient
 	 *
 	 * @param $zoneId
 	 * @param $methodId
+	 *
 	 * @return mixed
 	 */
-	public static function getShippingMethod( $zoneId, $methodId )
-	{
+	public static function getShippingMethod( $zoneId, $methodId ) {
 		return self::getResource( '/shipping/zones/' . $zoneId . '/methods/' . $methodId, 'ShippingMethod' );
 	}
 
@@ -1990,10 +1979,10 @@ class BCClient
 	 * Return a collection of shipping-methods
 	 *
 	 * @param $zoneId
+	 *
 	 * @return mixed
 	 */
-	public static function getShippingMethods( $zoneId )
-	{
+	public static function getShippingMethods( $zoneId ) {
 		return self::getCollection( '/shipping/zones/' . $zoneId . '/methods', 'ShippingMethod' );
 	}
 
@@ -2003,10 +1992,10 @@ class BCClient
 	 *
 	 * @param $zoneId
 	 * @param $methodId
+	 *
 	 * @return mixed
 	 */
-	public static function deleteShippingMethod( $zoneId, $methodId )
-	{
+	public static function deleteShippingMethod( $zoneId, $methodId ) {
 		return self::deleteResource( '/shipping/zones/' . $zoneId . '/methods/' . $methodId );
 	}
 }

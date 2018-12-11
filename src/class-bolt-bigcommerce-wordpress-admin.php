@@ -1,24 +1,24 @@
 <?php
+
 namespace BoltBigcommerce;
 
-if ( !defined( 'ABSPATH' ) ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once('class-bolt-bigcommerce-wordpress.php');
+require_once( 'class-bolt-bigcommerce-wordpress.php' );
 
 /*
 * Bolt_Bigcommerce_Wordpress_Admin class for setting Bolt settings.
 */
 
-class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
-{
+class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress {
 	private $form_fields;
+
 	/**
 	 * Set up base actions
 	 */
-	public function init()
-	{
+	public function init() {
 		$basename = BOLT_WOOCOMMERCE_MAIN_PATH;
 		$prefix   = is_network_admin() ? 'network_admin_' : '';
 		add_filter( "{$prefix}plugin_action_links_$basename", array( $this, 'wbpg_plugin_action_links' ), 10, 4 );
@@ -44,6 +44,7 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 		$custom_actions = array(
 			'configure' => sprintf( '<a href="%s">%s</a>', admin_url( '/edit.php?post_type=bigcommerce_product&page=bolt-bigcommerce' ), __( 'Settings', 'bolt-bigcommerce-wordpress' ) ),
 		);
+
 		// add the links to the front of the actions list
 		return array_merge( $custom_actions, $actions );
 	}
@@ -51,17 +52,18 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 	/**
 	 * Enqueue scripts
 	 */
-	public function enqueue_admin_scripts()
-	{
-		wp_enqueue_style('bolt-bigcommerce', plugins_url('css/bolt-bigcommerce.css', __FILE__));
+	public function enqueue_admin_scripts() {
+		wp_enqueue_style( 'bolt-bigcommerce', plugins_url( 'css/bolt-bigcommerce.css', __FILE__ ) );
 	}
 
 	/**
 	 * Add plugin to wordpress admin menu
 	 */
-	public function admin_menu()
-	{
-		add_submenu_page( 'edit.php?post_type=bigcommerce_product', 'Bolt', 'Bolt', 'manage_options', 'bolt-bigcommerce', array( $this, 'settings' ) );
+	public function admin_menu() {
+		add_submenu_page( 'edit.php?post_type=bigcommerce_product', 'Bolt', 'Bolt', 'manage_options', 'bolt-bigcommerce', array(
+			$this,
+			'settings'
+		) );
 		foreach ( $this->form_fields as $key => $form_field ) {
 			register_setting( 'bolt-bigcommerce', "bolt-bigcommerce_{$key}" );
 		}
@@ -70,37 +72,36 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 	/**
 	 * Initialize $this->form_fields - array of settings page fields
 	 */
-	public function init_form_fields()
-	{
+	public function init_form_fields() {
 		/**
 		 * Settings for Bolt Payment Gateway.
 		 */
 		$this->form_fields = array(
-			'api_key' => array(
-				'title' => __( 'Api Key', 'bolt-bigcommerce-wordpress' ),
-				'type' => 'text',
+			'api_key'         => array(
+				'title'       => __( 'Api Key', 'bolt-bigcommerce-wordpress' ),
+				'type'        => 'text',
 				'description' => __( 'Used when calling Bolt API from your server.', 'bolt-bigcommerce-wordpress' ),
-				'default' => '',
-				'desc_tip' => true,
+				'default'     => '',
+				'desc_tip'    => true,
 				'placeholder' => __( 'Enter Api Key', 'bolt-bigcommerce-wordpress' ),
 			),
-			'signing_secret' => array(
-				'title' => __( 'Signing Secret', 'bolt-bigcommerce-wordpress' ),
-				'type' => 'text',
+			'signing_secret'  => array(
+				'title'       => __( 'Signing Secret', 'bolt-bigcommerce-wordpress' ),
+				'type'        => 'text',
 				'description' => __( 'Used to authenticate the signature of the payload from Bolt server.', 'bolt-bigcommerce-wordpress' ),
-				'default' => '',
-				'desc_tip' => true,
+				'default'     => '',
+				'desc_tip'    => true,
 				'placeholder' => __( 'Enter Payment secret key', 'bolt-bigcommerce-wordpress' ),
 			),
 			'publishable_key' => array(
-				'title' => __( 'Publishable Key', 'bolt-bigcommerce-wordpress' ),
-				'type' => 'text',
+				'title'       => __( 'Publishable Key', 'bolt-bigcommerce-wordpress' ),
+				'type'        => 'text',
 				'description' => __( 'Embedded in your website and used to identify you as a merchant. Typically used on the checkout page.', 'bolt-bigcommerce-wordpress' ),
-				'default' => '',
-				'desc_tip' => true,
+				'default'     => '',
+				'desc_tip'    => true,
 				'placeholder' => __( 'Enter Processing Key', 'bolt-bigcommerce-wordpress' ),
 			),
-			'testmode'           => array(
+			'testmode'        => array(
 				'title'       => __( 'Bolt sandbox', 'bolt-bigcommerce-wordpress' ),
 				'type'        => 'checkbox',
 				'label'       => __( 'Enable Bolt sandbox', 'bolt-bigcommerce-wordpress' ),
@@ -115,8 +116,8 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 				'default'     => 'true',
 				'desc_tip'    => true,
 				'options'     => array(
-					'true'    => __( 'Capture', 'bolt-bigcommerce-wordpress' ),
-					'false'   => __( 'Authorize', 'bolt-bigcommerce-wordpress' ),
+					'true'  => __( 'Capture', 'bolt-bigcommerce-wordpress' ),
+					'false' => __( 'Authorize', 'bolt-bigcommerce-wordpress' ),
 				),
 			),
 
@@ -127,12 +128,11 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 	/**
 	 * Output form with settings on admin page
 	 */
-	public function settings()
-	{
+	public function settings() {
 		$admin_url = admin_url();
 		echo "<h2>" .
-			__( 'Bolt setup', 'bolt-bigcommerce-wordpress' ) .
-			"</h2>";
+		     __( 'Bolt setup', 'bolt-bigcommerce-wordpress' ) .
+		     "</h2>";
 		echo '<form action="' . admin_url() . 'options.php" method="POST">';
 		settings_fields( 'bolt-bigcommerce' );
 		echo '<table class="form-table">';
@@ -164,11 +164,11 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 	}
 
 	public function generate_checkbox_html( $key, $name, $form_field ) {
-		$value = $this->get_option( $key , $form_field['default'] );
+		$value = $this->get_option( $key, $form_field['default'] );
 		echo '<tr>
 	<th scope="row">' . $form_field["title"] . '</th>
 	<td> <fieldset><legend class="screen-reader-text"><span>' . $form_field["title"] . '</span></legend><label for="' . $name . '">
-	<input name="' . $name . '" type="checkbox" id="' . $name . '" value="' . $form_field['default'] . '" ' . ( 'yes' == $value ? 'checked' : '') . ' />
+	<input name="' . $name . '" type="checkbox" id="' . $name . '" value="' . $form_field['default'] . '" ' . ( 'yes' == $value ? 'checked' : '' ) . ' />
 	' . $form_field["label"] . '</label>
 	<p class="description" id="' . $name . '-description">' . $form_field["description"] . '</p>
 </fieldset></td>
@@ -177,13 +177,15 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 
 	public function generate_select_html( $key, $name, $form_field ) {
 		$value = $this->get_option( $key );
-		if ( false === $value ) $value = $form_field['default'];
+		if ( false === $value ) {
+			$value = $form_field['default'];
+		}
 		echo '<tr>
 	<th scope="row"><label for="' . $name . '">' . $form_field["title"] . '</label></th>
 	<td>
 	<select name="' . $name . '" id="' . $name . '">';
 		foreach ( $form_field["options"] as $option_name => $option_value ) {
-			echo '<option ' . ($option_name == $value ? 'selected="selected" ' : '') . 'value="'. $option_name . '">' . $option_value . '</option>';
+			echo '<option ' . ( $option_name == $value ? 'selected="selected" ' : '' ) . 'value="' . $option_name . '">' . $option_value . '</option>';
 		}
 		echo '</select><p class="description" id="' . $name . '-description">' . $form_field["description"] . '</p>';
 	}

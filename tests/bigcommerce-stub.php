@@ -1,3 +1,5 @@
 <?php
+
 Namespace BigCommerce\Cart;
-class Cart{}
+class Cart {
+}

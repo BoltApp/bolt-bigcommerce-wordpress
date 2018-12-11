@@ -22,10 +22,11 @@ if ( ! file_exists( $_tests_dir . '/includes/functions.php' ) ) {
 require_once $_tests_dir . '/includes/functions.php';
 
 //TODO When Bigcommerce is open add it
-tests_add_filter('active_plugins', function ( $option ) {
+tests_add_filter( 'active_plugins', function ( $option ) {
 	$option[] = 'bigcommerce-for-wordpress/bigcommerce.php';
+
 	return $option;
-});
+} );
 
 
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
@@ -41,13 +42,16 @@ function _manually_load_plugin() {
 	require dirname( dirname( __FILE__ ) ) . '/bolt-bigcommerce-wordpress.php';
 
 }
+
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
-$bigcommerce_dir =  '/tmp/wordpress/wp-content/plugins/bigcommerce-for-wordpress';
-if (!file_exists($bigcommerce_dir)) mkdir($bigcommerce_dir );
-$file = fopen($bigcommerce_dir.'/bigcommerce.php','w');
-fwrite ($file,"<?php>");
-fclose ($file);
+$bigcommerce_dir = '/tmp/wordpress/wp-content/plugins/bigcommerce-for-wordpress';
+if ( ! file_exists( $bigcommerce_dir ) ) {
+	mkdir( $bigcommerce_dir );
+}
+$file = fopen( $bigcommerce_dir . '/bigcommerce.php', 'w' );
+fwrite( $file, "<?php>" );
+fclose( $file );
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
