@@ -19,10 +19,33 @@ class Bolt_Bigcommerce_Wordpress_Admin extends Bolt_Bigcommerce_Wordpress
 	 */
 	public function init()
 	{
+		$basename = BOLT_WOOCOMMERCE_MAIN_PATH;
+		$prefix   = is_network_admin() ? 'network_admin_' : '';
+		add_filter( "{$prefix}plugin_action_links_$basename", array( $this, 'wbpg_plugin_action_links' ), 10, 4 );
+
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
 		$this->init_form_fields();
 		parent::init();
+	}
+
+	/**
+	 * Add plugin setting tab for plugins page.
+	 *
+	 * @param $actions
+	 * @param $plugin_file
+	 * @param $plugin_data
+	 * @param $context
+	 *
+	 * @return array
+	 */
+	public function wbpg_plugin_action_links( $actions, $plugin_file, $plugin_data, $context ) {
+		$section_code   = WC_BOLT_OLD_VERSION ? 'bolt_payment_gateway' : 'wc-bolt-payment-gateway';
+		$custom_actions = array(
+			'configure' => sprintf( '<a href="%s">%s</a>', admin_url( '/edit.php?post_type=bigcommerce_product&page=bolt-bigcommerce' ), __( 'Settings', 'bolt-bigcommerce-wordpress' ) ),
+		);
+		// add the links to the front of the actions list
+		return array_merge( $custom_actions, $actions );
 	}
 
 	/**

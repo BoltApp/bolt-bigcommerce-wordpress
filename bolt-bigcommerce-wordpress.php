@@ -19,6 +19,9 @@ define( 'BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH', 'bigcommerce-for-wordpress/bigcom
 if ( !defined( 'ABSPATH' ) ) {
 	exit;
 }
+if ( ! defined( 'BOLT_WOOCOMMERCE_MAIN_PATH' ) ) {
+	define( 'BOLT_WOOCOMMERCE_MAIN_PATH', plugin_basename( __FILE__ ) );
+}
 
 // Check if bigcommerce plugin installed and enables
 if ( in_array( BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH, apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
