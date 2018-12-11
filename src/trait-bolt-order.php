@@ -87,6 +87,10 @@ trait Bolt_Order
 	protected function check_products_availability($cart) {
 		$availability = true;
 		foreach ($cart["items"] as $item) {
+			if ( 0 == $item["product_id"] ) {
+				//gift sertificate
+				continue;
+			}
 			$product = $this->api_call_get_product( $item["product_id"] );
 			BoltLogger::write( 'call availability result' . print_r($product,true) );
 			if ("available" != $product->availability) {
@@ -98,7 +102,7 @@ trait Bolt_Order
 				$availability = false;
 				break;
 			} else if ("sku" == $product->inventory_tracking) {
-				//need to do additional API call for product withy variant
+				//need to do additional API call for product with variant
 				$variant_product = $this->api_call_get_product_variant( $item["product_id"], $item["variant_id"]);
 				if ($variant_product->data->inventory_level<$item["quantity"]) {
 					$options = "";
