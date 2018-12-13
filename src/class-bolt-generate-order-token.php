@@ -122,14 +122,8 @@ JAVASCRIPT;
 
 		$response   = $client->createOrder( $cartData );
 		$orderToken = $response->isResponseSuccessful() ? @$response->getBody()->token : '';
-		BoltLogger::write( "Create cart orderToken " . $orderToken );
 		if ( ! $orderToken ) {
-			echo "error Bolt order create";
-			print_r( $response );
-			print_r( $cartData );
-			print_r( $bigcommerce_cart );
-			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Bolt Order token doesn't create" ) );
-			exit;
+			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Bolt Order token doesn't create" ),array('response'=>$response,'cartData'=>$cartData,'bigcommerce_cart'=>$bigcommerce_cart) );
 		}
 
 		return $this->generate_button_code( $orderToken );

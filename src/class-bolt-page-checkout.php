@@ -92,23 +92,18 @@ class Bolt_Page_Checkout {
 	}
 
 	public function create_bolt_cart_by_product( $product_id, $quantity ) {
-		BoltLogger::write( "old cart " . print_r( $_COOKIE, true ) );
 		$old_bigcommerce_cart_id = "";
 		if ( isset( $_COOKIE['bigcommerce_cart_id'] ) && $_COOKIE['bigcommerce_cart_id'] <> "" ) {
 			$old_bigcommerce_cart_id        = $_COOKIE['bigcommerce_cart_id'];
 			$_COOKIE['bigcommerce_cart_id'] = "";
 		}
-		BoltLogger::write( "old cart " . $old_bigcommerce_cart_id );
 		$options   = array();
 		$modifiers = array();
 		$cart      = $this->cart()->add_line_item( $product_id, $options, $quantity, $modifiers );
 		if ( is_null( $cart ) ) {
 			$this->restore_bigcommerce_cart_cookie( $old_bigcommerce_cart_id );
-
 			return false;
 		}
-
-		BoltLogger::write( "cart after add line item" . print_r( $cart, true ) );
 
 		//map API ANSWER TO usual format
 		$mapper                    = new \BigCommerce\Cart\Cart_Mapper( $cart );
@@ -121,8 +116,6 @@ class Bolt_Page_Checkout {
 		//we don't need tax in this stage
 		$bolt_cart_data['cart']['total_amount'] = $bolt_cart_data['cart']['total_amount'] - $bolt_cart_data['cart']['tax_amount'];
 		$bolt_cart_data['cart']['tax_amount']   = 0;
-
-		BoltLogger::write( "new cart data " . print_r( $bolt_cart_data, true ) );
 
 		$this->restore_bigcommerce_cart_cookie( $old_bigcommerce_cart_id );
 
@@ -137,7 +130,6 @@ class Bolt_Page_Checkout {
 				'message' => $message
 			)
 		);
-		BoltLogger::write( "send_error" . print_r( $result, true ) );
 		wp_send_json( $result );
 	}
 
@@ -166,8 +158,6 @@ class Bolt_Page_Checkout {
 
 		$response         = $bolt_cart_data;
 		$response->status = 'success';
-
-		BoltLogger::write( "page checkout response: " . print_r( $response, true ) );
 
 		wp_send_json( $response );
 		exit;

@@ -89,30 +89,22 @@ class Bolt_Shipping_And_Tax {
 		//try get data from cache
 		$bolt_cart_md5 = md5( $bolt_order_json );
 		if ( $cached_estimate = get_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5 ) ) {
-			BoltLogger::write( "return shipping_and_tax value from cache" );
 			wp_send_json( json_decode( $cached_estimate ) );
 		}
 
 		$shipping_and_tax_payload = $this->evaluate_shipping_tax( $bolt_order );
 
-		BoltLogger::write( "response shipping options" . print_r( $shipping_and_tax_payload, true ) );
-
 		wp_send_json( $shipping_and_tax_payload );
 	}
 
 	public function evaluate_shipping_tax( $bolt_order ) {
-		BoltLogger::write( "evaluate_shipping_tax " . var_export( $bolt_order, true ) );
-
 		$this->order_reference = $bolt_order->cart->order_reference;
 
 		//get Bigcommerce checkout
-
 		$bolt_cart_id_option = get_option( "bolt_cart_id_" . $bolt_order->cart->order_reference );
-		BoltLogger::write( print_r( $bolt_cart_id_option, true ) . " = get_option( \"bolt_cart_id_\" . {$bolt_order->cart->order_reference} )" );
 		$this->bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
 		if ( ! $this->bigcommerce_cart_id ) {
 			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't read bigcommerce_cart_id for " . $bolt_order->cart->order_reference ) );
-
 			return false;
 		}
 
@@ -135,7 +127,6 @@ class Bolt_Shipping_And_Tax {
 
 		if ( isset( $bolt_cart_id_option["product"]['customer_id'] ) ) {
 			//change customer_id only if necessary
-			BoltLogger::write( "change customer_id from '" . $checkout->get()->data->cart->customer_id . "' to '{$bolt_cart_id_option["product"]['customer_id']}'" );
 			if ( $checkout->get()->data->cart->customer_id <> $bolt_cart_id_option["product"]['customer_id'] ) {
 				BCCLIENT::updateResource( "/v3/carts/{$this->bigcommerce_cart_id}",
 					array(
@@ -149,9 +140,7 @@ class Bolt_Shipping_And_Tax {
 		//In Bolt  the shipping address is the same as the billing address
 		$consignment->shipping_address = $address;
 		//send all physical products to this address
-		$bolt_shipping_options = array();
 		$physical_items        = $checkout->get()->data->cart->line_items->physical_items;
-		BoltLogger::write( "checkout->get()=" . var_export( $checkout->get(), true ) );
 		if ( ! empty( $physical_items ) ) { //shipping is required
 			foreach ( $physical_items as $physical_item ) {
 				$consignment->line_items[] = array(
@@ -188,7 +177,6 @@ class Bolt_Shipping_And_Tax {
 			// Cache the shipping and tax response
 			update_option( 'bolt_shipping_and_tax_' . $bolt_order->cart->order_reference . "_" . $bolt_cart_md5, json_encode( $shipping_and_tax_payload ), false );
 		}
-
 		return $shipping_and_tax_payload;
 	}
 
@@ -198,19 +186,9 @@ class Bolt_Shipping_And_Tax {
 		$response                       = $this->cart()->add_line_item( $product['product_id'], $product['options'], $product['quantity'], $product['modifiers'] );
 		if ( $response->getId() <> $bolt_cart_id_option['cart_id'] ) {
 			//new cart was created
-			BoltLogger::write( "customer_id {$product['customer_id']} set for cart " . $response->getId() . " Old cart {$bolt_cart_id_option['cart_id']}" );
 			$bolt_cart_id_option['cart_id'] = $response->getId();
-			/*
-			if (($product['customer_id'])) {
-				BCCLIENT::updateResource("/v3/carts/{$bolt_cart_id_option['cart_id']}",
-					array(
-						'customer_id'=> $product['customer_id']
-					));
-			}
-			*/
 			update_option( "bolt_cart_id_" . $this->order_reference, $bolt_cart_id_option );
 			$this->bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
 		}
 	}
-
 }

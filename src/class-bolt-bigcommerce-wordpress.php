@@ -96,7 +96,6 @@ class Bolt_Bigcommerce_Wordpress {
 		} else {
 			$store_hash = $matches[1];
 		}
-		BoltLogger::write( "init_bigcommerce_api client_id " . get_option( "BIGCOMMERCE_CLIENT_ID" ) . 'auth_token' . get_option( "BIGCOMMERCE_ACCESS_TOKEN" ) );
 		BCClient::configure( [
 			'client_id'     => get_option( "BIGCOMMERCE_CLIENT_ID" ),
 			'auth_token'    => get_option( "BIGCOMMERCE_ACCESS_TOKEN" ),

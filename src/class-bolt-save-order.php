@@ -54,36 +54,28 @@ class Bolt_Save_Order {
 	 *  Handle Bolt response
 	 */
 	function handler_response() {
-		$hmacHeader = @$_SERVER['HTTP_X_BOLT_HMAC_SHA256'];
-		BoltLogger::write( "bolt_endpoint_handler" );
-		$signatureVerifier = new \BoltPay\SignatureVerifier(
-			\BoltPay\Bolt::$signingSecret
-		);
 		$bolt_data_json    = file_get_contents( 'php://input' );
 		$bolt_data         = json_decode( $bolt_data_json );
 		BugsnagHelper::addBreadCrumbs( array( 'WEBHOOK CALL' => array( 'body' => $bolt_data ) ) );
-		BoltLogger::write( "webhook call" . print_r( $bolt_data, true ) );
 
+		$hmacHeader = @$_SERVER['HTTP_X_BOLT_HMAC_SHA256'];
+		$signatureVerifier = new \BoltPay\SignatureVerifier(
+			\BoltPay\Bolt::$signingSecret
+		);
 		if ( ! $signatureVerifier->verifySignature( $bolt_data_json, $hmacHeader ) ) {
 			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Failed HMAC Authentication" ) );
 		}
 
-
 		// Implement discount hook
 		if ( 'discounts.code.apply' === $bolt_data->type ) {
-			BoltLogger::write( "into discount if" );
-			BoltLogger::write( $bolt_data_json );
 			$bolt_discounts = new Bolt_Discounts_Helper( $bolt_data );
-
 			return $bolt_discounts->apply_coupon_from_discount_hook();
 		}
 
 
 		if ( ! isset( $bolt_data->reference ) && isset( $bolt_data->items ) ) {
 			// Create Cart for Product Page Checkout
-			BoltLogger::write( "Create Cart for Product Page Checkout" );
 			$bolt_page_checkout = new Bolt_Page_Checkout;
-
 			return $bolt_page_checkout->create_cart_from_api_call_and_send_it( $bolt_data );
 		}
 
@@ -99,8 +91,6 @@ class Bolt_Save_Order {
 			)
 		);
 
-		BoltLogger::write( "response: " . print_r( $response, true ) );
-
 		wp_send_json( $response );
 	}
 
@@ -112,7 +102,6 @@ class Bolt_Save_Order {
 	 */
 	function order_set_status( $bolt_data ) {
 		$message = '';
-		BoltLogger::write( "order_set_status( {$this->order_id}, {$bolt_data->type} ):" . print_r( $bolt_data, true ) );
 		$query = array();
 		//TODO If shop owner changed default statuses https://store-5669f02hng.mybigcommerce.com/manage/orders/order-statuses
 
@@ -124,7 +113,7 @@ class Bolt_Save_Order {
 				$query['status_id'] = 11; // Awaiting Fulfillment
 			}
 			$query['payment_provider_id'] = $bolt_data->id;
-			$message                      = $bolt_data->type;
+			$message = $bolt_data->type;
 			if ( isset( $bolt_data->reference ) ) {
 				$this->transaction_reference = $bolt_data->reference;
 			}
@@ -141,7 +130,6 @@ class Bolt_Save_Order {
 			} else {
 				BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Try to refund more then rest" ) );
 			}
-			BoltLogger::write( "order data" . print_r( $order_data, true ) );
 			$query['refunded_amount'] = $bolt_data->amount / 100 + $order_data->refunded_amount;
 			$message                  = 'refunded';
 			// void a void occurred
@@ -185,7 +173,6 @@ class Bolt_Save_Order {
 	}
 
 	protected function order_update( $query ) {
-		BoltLogger::write( "Order {$this->order_id} query " . print_r( $query, true ) );
 		$result = BCClient::updateResource( "/v2/orders/{$this->order_id}", $query );
 		if ( ! $result ) {
 			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't update order" ) );
@@ -214,25 +201,22 @@ class Bolt_Save_Order {
 	 * @return array
 	 */
 	function bolt_create_order( $bolt_reference, $order_reference, $bolt_data, $is_json = false ) {
-		BoltLogger::write( "### params =" . var_export( array(
-				"bolt_reference"  => $bolt_reference,
-				"order_reference" => $order_reference,
-				"bolt_data"       => $bolt_data,
-				"is_json"         => $is_json,
-			), true ) );
+		BugsnagHelper::addBreadCrumbs( array( 'bolt_create_order' => array(
+			"bolt_reference"  => $bolt_reference,
+			"order_reference" => $order_reference,
+			"bolt_data"       => $bolt_data,
+			"is_json"         => $is_json,
+		) ) );
 		$result = array(
 			'status'   => 'success',
 			'order_id' => 0,
 		);
 		// prevent re-creation order
-		BoltLogger::write( "bolt_create_order( {$bolt_reference}, {$order_reference}) )" );
 		$bc_order_id = get_option( "bolt_order_{$order_reference}" );
 		if ( $bc_order_id ) {
-			BoltLogger::write( "prevent re-creation order" );
 			$this->order_id     = $bc_order_id;
 			$result["message"]  = $this->order_set_status( $bolt_data );
 			$result["order_id"] = $bc_order_id;
-
 			return $result;
 		}
 
@@ -241,7 +225,6 @@ class Bolt_Save_Order {
 		$bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
 		if ( ! $bigcommerce_cart_id ) {
 			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't read bigcommerce_cart_id for " . $order_reference ) );
-
 			return false;
 		}
 
@@ -256,29 +239,21 @@ class Bolt_Save_Order {
 				$cookie_life                    = apply_filters( 'bigcommerce/cart/cookie_lifetime', 30 * DAY_IN_SECONDS );
 				$secure                         = ( 'https' === parse_url( home_url(), PHP_URL_SCHEME ) );
 				$cookie_result                  = setcookie( 'bigcommerce_cart_id', $bigcommerce_cart_id, time() + $cookie_life, COOKIEPATH, COOKIE_DOMAIN, $secure );
-				BoltLogger::write( "{$cookie_result} = setcookie( bigcommerce_cart_id, {$bigcommerce_cart_id}, time() + " . $cookie_life . ", " . COOKIEPATH . ", " . COOKIE_DOMAIN . ", $secure );" );
 			}
 			//get data from Bolt transaction
 			$bolt_client      = $this->get_bolt_client();
 			$bolt_transaction = $bolt_client->getTransactionDetails( $bolt_reference )->getBody();
-			BoltLogger::write( "### bolt_input[getTransactionDetails] " . var_export( $bolt_reference, true ) );
-			BoltLogger::write( "### bolt_output[getBody] " . var_export( $bolt_transaction, true ) );
-			BoltLogger::write( "bolt_transaction " . print_r( $bolt_transaction, true ) );
-			$bolt_billing_address = $bolt_transaction->order->cart->billing_address;
 			$shipment             = $bolt_transaction->order->cart->shipments[0];
 		}
 		$shipping_option_id = $shipment->reference;
-		BoltLogger::write( "shipment" . print_r( $shipment, true ) );
 
 		$checkout = $this->get_checkout_api( $bigcommerce_cart_id );
 
 		//set selected shipping method
 		if ( "no_shipping" <> $shipping_option_id ) {
 			$checkout->set_shipping_option( $shipping_option_id );
-			BoltLogger::write( "### bigcommerce_input[set_shipping_option] " . var_export( $shipping_option_id, true ) );
 		}
 		$customer_id = $checkout->get()->data->cart->customer_id;
-		BoltLogger::write( "customer_id in cart is '{$customer_id}'" );
 
 		$this->order_id = $checkout->create_order();
 
@@ -302,13 +277,9 @@ class Bolt_Save_Order {
 
 		//save Bigcommerce order id
 		add_option( "bolt_order_{$order_reference}", $this->order_id );
-		BoltLogger::write( "add_option( \"bolt_order_{$order_reference}\", $this->order_id )" );
-
 		//delete cart (it doesn't delete itself altough according to the documentation it should
 		$checkout->delete();
-
 		$result["order_id"] = $this->order_id;
-
 		return $result;
 	}
 
@@ -316,9 +287,7 @@ class Bolt_Save_Order {
 	 * AJAX success callback
 	 */
 	function ajax_bolt_create_order() {
-		BoltLogger::write( "save_order POST" . print_r( $_POST, true ) );
 		$bolt_data = json_decode( stripslashes( $_POST["transaction_details"] ) );
-		BoltLogger::write( "transaction_details" . print_r( $bolt_data, true ) );
 		$result = $this->bolt_create_order( $bolt_data->reference, $bolt_data->cart->order_reference, $bolt_data, true );
 
 		//Write order id to session. We'll read it on confirmation page
@@ -326,8 +295,6 @@ class Bolt_Save_Order {
 			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't save session cos headers already sent in {$filename} {$linenum}" ) );
 		}
 		$_SESSION["bolt_order_id"] = $result["order_id"];
-		BoltLogger::write( "\$_SESSION[\"bolt_order_id\"] = {$result["order_id"]};" );
-		BoltLogger::write( "result in save order" . print_r( $result, true ) );
 		$this->clean_up_archaic_resources_async();
 		wp_send_json( array(
 			'result'       => 'success',
@@ -357,19 +324,16 @@ class Bolt_Save_Order {
 	protected function delete_rejected_reversible_note() {
 		if ( $this->rejection_note_text() == $this->get_staff_note() ) {
 			$this->set_staff_note( '' );
-			BoltLogger::write( "STAFF_NOTE DELETE" );
 		} else {
-			BoltLogger::write( "STAFF_NOTE not delete cos already set '" . $this->get_staff_note() . "' not '" . $this->rejection_note_text() . "''" );
+			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "STAFF_NOTE not delete cos already set '" . $this->get_staff_note() . "' not '" . $this->rejection_note_text() ."'" ) );
 		}
-
 	}
 
 	protected function add_rejected_reversible_note() {
 		if ( '' == $this->get_staff_note() ) {
 			$this->set_staff_note( $this->rejection_note_text() );
-			BoltLogger::write( "STAFF_NOTE SET" );
 		} else {
-			BoltLogger::write( "STAFF_NOTE not set cos already set '" . $this->get_staff_note() . "''" );
+			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "STAFF_NOTE not set cos already set '" . $this->get_staff_note() . "'" ) );
 		}
 	}
 
@@ -377,10 +341,8 @@ class Bolt_Save_Order {
 	 * Makes non-blocking call to URL endpoint for cleaning up expired order creation resources
 	 */
 	protected function clean_up_archaic_resources_async() {
-		BoltLogger::write( "start clean_up_archaic_resources_async" );
 		if ( ! function_exists( 'stream_socket_client' ) ) {
 			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "This merchant does not appear to have streamed socket support enabled for resource cleanup.  Please enable this on their server." ) );
-
 			return;
 		}
 
@@ -404,13 +366,10 @@ class Bolt_Save_Order {
 		}
 		$errno  = '';
 		$errstr = '';
-		BoltLogger::write( "$protocol$host:$port" );
 		$fp = stream_socket_client( "$protocol$host:$port", $errno, $errstr, 30, STREAM_CLIENT_CONNECT, $context );
-		BoltLogger::write( print_r( $fp, true ) );
 		stream_set_blocking( $fp, false );
 
 		if ( ! $fp ) {
-			BoltLogger::write( "Error connecting to clean Bolt resources. $errstr ($errno)\n" );
 			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Error connecting to clean Bolt resources. $errstr ($errno)\n" ) );
 		} else {
 			$out = "POST /wp-admin/admin-ajax.php?action=bolt_clean_up_resources HTTP/1.1\r\n";
@@ -430,7 +389,6 @@ class Bolt_Save_Order {
 	 */
 	public function ajax_clean_up_archaic_resources() {
 		global $wpdb;
-		BoltLogger::write( "start ajax_clean_up_archaic_resources" );
 		ignore_user_abort( true );
 		set_time_limit( 300 );
 		//////////////////////////////////////////////
@@ -446,11 +404,8 @@ class Bolt_Save_Order {
 			# We leave them for that long in case they are current orders being processed, or pending review over the weekend.
 			update_option( 'delete_bolt_resources_time', time() + 60 * 60 * 24 * 3 );
 			update_option( 'delete_bolt_order_resources', implode( ",", $wpdb->get_col( "SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_order_%'" ) ), false );
-			BoltLogger::write( "update_option('delete_bolt_order_resources', " . implode( ",", $wpdb->get_col( "SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_order_%'" ) ) );
 			update_option( 'delete_bolt_cart_id_resources', implode( ",", $wpdb->get_col( "SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_cart_id_%'" ) ), false );
-			BoltLogger::write( "update_option('delete_bolt_cart_id_resources', " . implode( ",", $wpdb->get_col( "SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_cart_id_%'" ) ) );
 			update_option( 'delete_bolt_shipping_and_tax_resources', implode( ",", $wpdb->get_col( "SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE 'bolt_shipping_and_tax_%'" ) ), false );
-
 			update_option( 'has_initiated_clearing_historic_bolt_resources', true );
 		}
 

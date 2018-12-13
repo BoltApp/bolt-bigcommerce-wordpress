@@ -23,11 +23,6 @@ trait Bolt_Order {
 			return false;
 		}
 
-		//TODO: (later) If the cart changes without page reload handle then send to Bolt the new cart
-		//In bolt-woocommerce we use page reload at event 'updated_cart_totals' but I don't see JS event on bigcommerce-wordpress
-		BoltLogger::write( "bolt_generate_cart_data from " . print_r( $bigcommerce_cart, true ) );
-		BoltLogger::write( "bolt_generate_cart_data from " . json_encode( $bigcommerce_cart ) );
-
 		$currency_code = get_option( \BigCommerce\Settings\Sections\Currency::CURRENCY_CODE, '' );
 
 		$tax_amount      = isset( $bigcommerce_cart["tax_amount"]["raw"] ) ? $bigcommerce_cart["tax_amount"]["raw"] * 100 : 0;
@@ -72,7 +67,7 @@ trait Bolt_Order {
 			);
 		}
 		$cartData = array( "cart" => $cart );
-		BoltLogger::write( "Create cart " . print_r( $cartData, true ) );
+		BugsnagHelper::addBreadCrumbs( $cartData );
 
 		return $cartData;
 	}
@@ -93,7 +88,6 @@ trait Bolt_Order {
 				continue;
 			}
 			$product = $this->api_call_get_product( $item["product_id"] );
-			BoltLogger::write( 'call availability result' . print_r( $product, true ) );
 			if ( "available" != $product->availability ) {
 				$this->set_availability_error( $product->name, 0 );
 				$availability = false;
@@ -129,7 +123,6 @@ trait Bolt_Order {
 		//save link between order_reference and bolt_cart_id_
 		//it uses when we create order in bigcommerce (function bolt_create_order)
 		update_option( "bolt_cart_id_" . $this->order_reference, array( 'cart_id' => $cart_id ) );
-		BoltLogger::write( "update_bolt_cart_id_option bolt_cart_id_{$this->order_reference}, array('cart_id'=>{$cart_id},'product'=>" . print_r( $product, true ) );
 	}
 
 

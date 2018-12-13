@@ -4,7 +4,7 @@ namespace BoltBigcommerce;
 
 class BoltLogger {
 	const LOGECHO = false;
-	const IS_ENABLED = true;
+	const IS_ENABLED = false;
 
 	public static function write( $text ) {
 		if ( ! self::IS_ENABLED ) {

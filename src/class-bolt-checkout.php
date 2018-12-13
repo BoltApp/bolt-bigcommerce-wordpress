@@ -27,8 +27,6 @@ class Bolt_Checkout {
 	 */
 	private function _get() {
 		$data = BCClient::getCollection( "/v3/checkouts/{$this->checkout_id}" );
-		BoltLogger::write( "checkout = BCClient::getCollection( \"/v3/checkouts/{$this->checkout_id}\" );" );
-		BoltLogger::write( "get checkout " . print_r( $data, true ) );
 		if ( ! $data ) {
 			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't get checkout" ) );
 		}
@@ -58,17 +56,13 @@ class Bolt_Checkout {
 	 * @return bool true if address was changed
 	 */
 	public function update_address( $address ) {
-		BoltLogger::write( "update_address input parametrs " . var_export( $address, true ) );
 		if ( $this->address_is_change( $this->get()->data->billing_address, $address ) ) {
 			//add or update billing address
 			$data = BCClient::createResource( "/v3/checkouts/{$this->checkout_id}/billing-address", $address );
 			if ( ! $data ) {
 				BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't add address to checkout" ) );
 			}
-			BoltLogger::write( "add billing address /v3/checkouts/{$this->checkout_id}/billing-address " . json_encode( $address ) );
-			BoltLogger::write( "add billing address answer " . print_r( $data, true ) );
 			$this->_data = $data;
-
 			return true;
 		} else {
 			return false;
@@ -104,8 +98,6 @@ class Bolt_Checkout {
 				var_dump( $address1->{$property} );
 				var_dump( $address2->{$property} );
 				$dump = ob_get_clean();
-				BoltLogger::write( "address_is_change {$property} {$dump}" . print_r( $address1, true ) . " " . print_r( $address2, true ) );
-
 				return true;
 			}
 		}
@@ -119,27 +111,19 @@ class Bolt_Checkout {
 	 * @param object $consignment
 	 */
 	public function add_or_update_consignment( $consignment ) {
-		BoltLogger::write( "add_or_update_consignment input parameters " . var_export( $consignment, true ) );
 		if ( ! isset( $this->get()->data->consignments[0] ) ) { //consignment not created
 			$params = array( $consignment );
-			BoltLogger::write( "Add a New Consignment /v3/checkouts/{$this->checkout_id}/consignments?include=consignments.available_shipping_options" );
-			BoltLogger::write( json_encode( $params ) );
 			$data = BCClient::createResource( "/v3/checkouts/{$this->checkout_id}/consignments?include=consignments.available_shipping_options", $params );
 			if ( ! $data ) {
 				BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't create consignment" ) );
 			}
-			BoltLogger::write( "Add a New Consignment answer " . print_r( $data, true ) );
 			$consignment_id = $data->data->consignments[0]->id;
-			BoltLogger::write( "New consigment ID {$consignment_id}" );
 		} else {
 			$consignment_id = $this->get()->data->consignments[0]->id;
-			BoltLogger::write( "UPDATE Consignment /v3/checkouts/{$this->checkout_id}/consignments/$consignment_id?include=consignments.available_shipping_options" );
-			BoltLogger::write( json_encode( $consignment ) );
 			$data = BCClient::updateResource( "/v3/checkouts/{$this->checkout_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $consignment );
 			if ( ! $data ) {
 				BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't update consignment" ) );
 			}
-			BoltLogger::write( "New Consignment update answer " . print_r( $data, true ) );
 		}
 		$this->_data = $data;
 	}
@@ -162,13 +146,10 @@ class Bolt_Checkout {
 				$cost = (int) round( $shipping_option->cost * 100 );
 				//get tax amount for this shipping option
 				$body = (object) array( "shipping_option_id" => $shipping_option->id );
-				BoltLogger::write( "UPDATE Consignment for calculate tax amount /v3/checkouts/{$this->checkout_id}/consignments/$consignment_id" );
-				BoltLogger::write( json_encode( $body ) );
 				$data_cost = BCClient::updateResource( "/v3/checkouts/{$this->checkout_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $body );
 				if ( ! $data_cost ) {
 					BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't update consignment for calculate tax amount" ) );
 				}
-				BoltLogger::write( "UPDATE Consignment for calculate tax amount answer " . print_r( $data_cost, true ) );
 				$tax_amount = (int) round( ( $data_cost->data->consignments[0]->shipping_cost_inc_tax - $data_cost->data->consignments[0]->shipping_cost_ex_tax ) * 100 );
 				//add handling_cost as shipping
 				$cost                    += (int) round( $data_cost->data->consignments[0]->handling_cost_ex_tax * 100 );
@@ -197,13 +178,10 @@ class Bolt_Checkout {
 		}
 		$consignment_id = $data->data->consignments[0]->id;
 		$body           = (object) array( "shipping_option_id" => $shipping_option_id );
-		BoltLogger::write( "UPDATE Consignment /v3/checkouts/{$this->checkout_id}/consignments/$consignment_id?include=consignments.available_shipping_options" );
-		BoltLogger::write( json_encode( $body ) );
 		$data = BCClient::updateResource( "/v3/checkouts/{$this->checkout_id}/consignments/$consignment_id?include=consignments.available_shipping_options", $body );
 		if ( ! $data ) {
 			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't update consignment" ) );
 		}
-		BoltLogger::write( "set_shipping_option answer " . print_r( $data, true ) );
 		$this->_data = $data;
 	}
 
@@ -213,9 +191,7 @@ class Bolt_Checkout {
 	 * @return int order id
 	 */
 	public function create_order() {
-		BoltLogger::write( "CREATE ORDER /v3/checkouts/{$this->checkout_id}/orders" );
 		$order_data = BCClient::createResource( "/v3/checkouts/{$this->checkout_id}/orders" );
-		BoltLogger::write( print_r( $order_data, true ) );
 		$order_id = $order_data->data->id;
 		if ( ! $order_data ) {
 			BugsnagHelper::getBugsnag()->notifyException( new \Exception( "Can't create order" ) );
@@ -233,17 +209,13 @@ class Bolt_Checkout {
 
 	public function add_coupon( $coupon_code ) {
 		$params = (object) array( "coupon_code" => $coupon_code );
-		BoltLogger::write( "/v3/checkouts/{$this->checkout_id}/coupons " . json_encode( $params ) );
 		$data = BCClient::createResource( "/v3/checkouts/{$this->checkout_id}/coupons", $params );
-		BoltLogger::write( "COUPON CHECKOUT AFTER" . print_r( $data, true ) );
 		$this->_data = $data;
 	}
 
 	public function add_gift( $gift_code ) {
 		$params = (object) array( "giftCertificateCode" => $gift_code );
-		BoltLogger::write( "/v3/checkouts/{$this->checkout_id}/gift-certificates " . json_encode( $params ) );
 		$data = BCClient::createResource( "/v3/checkouts/{$this->checkout_id}/gift-certificates", $params );
-		BoltLogger::write( "GIFT CHECKOUT AFTER" . print_r( $data, true ) );
 		$this->_data = $data;
 	}
 

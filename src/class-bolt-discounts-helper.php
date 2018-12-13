@@ -31,13 +31,11 @@ class Bolt_Discounts_Helper {
 
 	public function __construct( $object = array() ) {
 		$this->api_request = $object;
-		BoltLogger::write( "Bolt_Discounts_Helper _construct" . var_export( $object, true ) );
 	}
 
 	protected function get_coupon_info( $discount_code ) {
 		try {
 			$coupon_info = BCClient::getCollection( "/v2/coupons?code=" . urlencode( $discount_code ) );
-			BoltLogger::write( "coupon_info " . var_export( $coupon_info, true ) );
 		} catch ( \Exception $e ) {
 			$coupon_info = "";
 		}
@@ -74,14 +72,11 @@ class Bolt_Discounts_Helper {
 			$bolt_cart_id_option = get_option( "bolt_cart_id_{$this->api_request->cart->order_reference}" );
 			$bigcommerce_cart_id = $bolt_cart_id_option['cart_id'];
 
-			BoltLogger::write( "$bigcommerce_cart_id = get_option( \"bolt_cart_id_{$this->api_request->cart->order_reference}\" )" . print_r( $this->api_request, true ) );
 			if ( ! $bigcommerce_cart_id ) {
 				throw new \Exception( __( 'Cart not found', 'bolt-bigcommerce-wordpress' ), self::E_BOLT_INSUFFICIENT_INFORMATION );
 			}
 			$discount_code = $this->api_request->discount_code;
-			BoltLogger::write( "BEFORE ADD COUPON" );
 			//try use $discount_code as coupon_code
-			$type        = "";
 			$coupon_info = $this->get_coupon_info( $discount_code );
 			if ( isset( $coupon_info[0]->name ) ) {
 				//it's coupon
@@ -98,8 +93,6 @@ class Bolt_Discounts_Helper {
 					//if coupon already applied return "ok"
 					$coupon = $checkout->get()->data->cart->coupons[ $old_coupons_qty ];
 					if ( $coupon->code == $discount_code ) {
-						BoltLogger::write( "already apllied" );
-
 						return array(
 							"status"          => "success",
 							"discount_code"   => $discount_code,
@@ -116,15 +109,11 @@ class Bolt_Discounts_Helper {
 				try {
 					$checkout->add_coupon( $discount_code );
 				} catch ( \Exception $e ) {
-					BoltLogger::write( "BC API EXCEPTION " . $e->getCode() . ") " . $e->getMessage() );
 					if ( 400 == $e->getCode() ) {
 						throw new \Exception( $e->getMessage(), SELF::E_BOLT_ITEMS_NOT_ELIGIBLE );
 					}
 				}
 				$coupon = $checkout->get( true )->data->cart->coupons[ $old_coupons_qty ];
-				BoltLogger::write( "checkout after add_coupon" . var_export( $checkout->get(), true ) );
-				BoltLogger::write( "old_coupons_qty=$old_coupons_qty" );
-				BoltLogger::write( "coupon" . print_r( $coupon, true ) );
 				$discounted_amount = isset( $coupon->discounted_amount ) ? (int) round( $coupon->discounted_amount * 100 ) : 0;
 				if ( 0 == $discounted_amount ) {
 					throw new \Exception( "error", SELF::E_BOLT_ITEMS_NOT_ELIGIBLE );
@@ -140,8 +129,6 @@ class Bolt_Discounts_Helper {
 			}
 			throw new \Exception( "Invalid coupon code", SELF::E_BOLT_CODE_INVALID );
 		} catch ( \Exception $e ) {
-			BoltLogger::write( "error(" . $e->getCode() . ") " . $e->getMessage() );
-
 			return array(
 				'status' => 'error',
 				'error'  => array(
