@@ -117,6 +117,15 @@ class Bolt_Page_Checkout {
 		$bolt_cart_data['cart']['total_amount'] = $bolt_cart_data['cart']['total_amount'] - $bolt_cart_data['cart']['tax_amount'];
 		$bolt_cart_data['cart']['tax_amount']   = 0;
 
+		//instead discount reduce price of item
+		if ($bolt_cart_data['cart']['discounts']) {
+			$discount = $bolt_cart_data['cart']['discounts'][0]['amount'];
+			$bolt_cart_data['cart']['items'][0]['total_amount'] -= $discount;
+			$bolt_cart_data['cart']['items'][0]['unit_price'] -=
+			round($discount / $bolt_cart_data['cart']['items'][0]['quantity']);
+			$bolt_cart_data['cart']['discounts'] = array();
+		}
+
 		$this->restore_bigcommerce_cart_cookie( $old_bigcommerce_cart_id );
 
 		return $bolt_cart_data;
