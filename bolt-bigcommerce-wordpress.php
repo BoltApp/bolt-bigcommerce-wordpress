@@ -8,7 +8,7 @@ namespace BoltBigcommerce;
  * @since             1.0.0
  * @package           Bigcommerce_Bolt_Checkout
  *
- * Plugin Name:       Bolt Checkout for BigCommerce for Wordpress
+ * Plugin Name:       Bolt Checkout for BigCommerce
  * Plugin URI:        http://bolt.com
  * Description:       It adds Bolt checkout to the Wordpress store using BigCommerce ECommerce plugin.
  * Version:           1.0.0
