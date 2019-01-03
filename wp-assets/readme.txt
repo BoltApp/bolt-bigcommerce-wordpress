@@ -14,7 +14,7 @@ Bring the world's fastest checkout to your Wordpress site using BigCommerce for 
 
 Bolt provides an Amazon-like checkout experience that drives a 10 - 50% lift in revenue. Low-converting checkouts lead to lost revenue and unhappy customers. 
 
-Bolt is the ultimate checkout solution for WooCommerce merchants who want to boost their sales and provide the security & speed customers expect.  
+Bolt is the ultimate checkout solution for Wordpress Bigcommerce merchants who want to boost their sales and provide the security & speed customers expect.
 
 = Why Merchants love Bolt: =
 

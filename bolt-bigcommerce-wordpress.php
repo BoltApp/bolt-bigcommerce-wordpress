@@ -6,7 +6,7 @@ namespace BoltBigcommerce;
  *
  * @link              http://bolt.com
  * @since             1.0.0
- * @package           WooCommerce_Bolt_Checkout
+ * @package           Bigcommerce_Bolt_Checkout
  *
  * Plugin Name:       Bolt Checkout for BigCommerce for Wordpress
  * Plugin URI:        http://bolt.com
@@ -22,16 +22,16 @@ define( 'BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH', 'bigcommerce-for-wordpress/bigcom
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-if ( ! defined( 'BOLT_WOOCOMMERCE_MAIN_PATH' ) ) {
-	define( 'BOLT_WOOCOMMERCE_MAIN_PATH', plugin_basename( __FILE__ ) );
+if ( ! defined( 'BOLT_BIGCOMMERCE_MAIN_PATH' ) ) {
+	define( 'BOLT_BIGCOMMERCE_MAIN_PATH', plugin_basename( __FILE__ ) );
 }
 
-if ( ! defined( 'BOLT_WOOCOMMERCE_PLUGIN_DIR' ) ) {
-	define( 'BOLT_WOOCOMMERCE_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+if ( ! defined( 'BOLT_BIGCOMMERCE_PLUGIN_DIR' ) ) {
+	define( 'BOLT_BIGCOMMERCE_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 }
 
-if ( ! defined( 'BOLT_WOOCOMMERCE_PLUGIN_URL' ) ) {
-	define( 'BOLT_WOOCOMMERCE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+if ( ! defined( 'BOLT_BIGCOMMERCE_PLUGIN_URL' ) ) {
+	define( 'BOLT_BIGCOMMERCE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 }
 
 // Check if bigcommerce plugin installed and enables
@@ -48,32 +48,32 @@ if ( in_array( BIGCOMMERCE_FOR_WORDPRESS_MAIN_PATH, apply_filters( 'active_plugi
 
 	// Check if there is admin user
 	if ( is_admin() ) {
-		require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . '/src/class-bolt-bigcommerce-wordpress-admin.php' );
+		require_once( BOLT_BIGCOMMERCE_PLUGIN_DIR . '/src/class-bolt-bigcommerce-wordpress-admin.php' );
 		$bolt_bigcommerce = new Bolt_Bigcommerce_Wordpress_Admin();
 	} else {
-		require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . '/src/class-bolt-bigcommerce-wordpress.php' );
+		require_once( BOLT_BIGCOMMERCE_PLUGIN_DIR . '/src/class-bolt-bigcommerce-wordpress.php' );
 		$bolt_bigcommerce = new Bolt_Bigcommerce_Wordpress();
 	}
 
 	// Include Bugsnag Class.
-	require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . '/src/BugsnagHelper.php' );
+	require_once( BOLT_BIGCOMMERCE_PLUGIN_DIR . '/src/BugsnagHelper.php' );
 	BugsnagHelper::initBugsnag();
 
 	// include Bolt API
 	require( dirname( __FILE__ ) . '/lib/bolt-php/init.php' );
 
-	require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . '/src/trait-bolt-order.php' );
+	require_once( BOLT_BIGCOMMERCE_PLUGIN_DIR . '/src/trait-bolt-order.php' );
 
-	require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . '/src/class-bolt-logger.php' );
+	require_once( BOLT_BIGCOMMERCE_PLUGIN_DIR . '/src/class-bolt-logger.php' );
 
 	//class for confirmation page
-	require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . '/src/class-bolt-confirmation-page.php' );
+	require_once( BOLT_BIGCOMMERCE_PLUGIN_DIR . '/src/class-bolt-confirmation-page.php' );
 
-	require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . '/src/class-bolt-discounts-helper.php' );
+	require_once( BOLT_BIGCOMMERCE_PLUGIN_DIR . '/src/class-bolt-discounts-helper.php' );
 
-	require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . '/src/class-bolt-checkout.php' );
+	require_once( BOLT_BIGCOMMERCE_PLUGIN_DIR . '/src/class-bolt-checkout.php' );
 
-	require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . '/src/class-bolt-cart.php' );
+	require_once( BOLT_BIGCOMMERCE_PLUGIN_DIR . '/src/class-bolt-cart.php' );
 
 	$bolt_bigcommerce->init();
 }

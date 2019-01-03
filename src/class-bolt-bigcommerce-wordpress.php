@@ -16,16 +16,16 @@ class Bolt_Bigcommerce_Wordpress {
 		$this->init_bolt_api();
 		$this->init_bigcommerce_api();
 
-		require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . 'src/class-bolt-generate-order-token.php' );
+		require_once( BOLT_BIGCOMMERCE_PLUGIN_DIR . 'src/class-bolt-generate-order-token.php' );
 		new Bolt_Generate_Order_Token();
 
-		require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . 'src/class-bolt-shipping-and-tax.php' );
+		require_once( BOLT_BIGCOMMERCE_PLUGIN_DIR . 'src/class-bolt-shipping-and-tax.php' );
 		new Bolt_Shipping_And_Tax();
 
-		require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . 'src/class-bolt-save-order.php' );
+		require_once( BOLT_BIGCOMMERCE_PLUGIN_DIR . 'src/class-bolt-save-order.php' );
 		new Bolt_Save_Order();
 
-		require_once( BOLT_WOOCOMMERCE_PLUGIN_DIR . 'src/class-bolt-page-checkout.php' );
+		require_once( BOLT_BIGCOMMERCE_PLUGIN_DIR . 'src/class-bolt-page-checkout.php' );
 		new Bolt_Page_Checkout();
 
 		//work with sessions
@@ -56,9 +56,9 @@ class Bolt_Bigcommerce_Wordpress {
 	 * Enqueue scripts
 	 */
 	public function enqueue_scripts() {
-		wp_enqueue_style( 'bolt-bigcommerce', BOLT_WOOCOMMERCE_PLUGIN_URL . 'src/css/bolt-bigcommerce.css', array(), BOLT_BIGCOMMERCE_VERSION, 'all' );
-		wp_enqueue_script( 'jquery.blockUI', BOLT_WOOCOMMERCE_PLUGIN_URL . 'src/js/jquery-blockui/jquery.blockUI.js', array( 'jquery' ), BOLT_BIGCOMMERCE_VERSION );
-		wp_enqueue_script( 'bolt-bigcommerce', BOLT_WOOCOMMERCE_PLUGIN_URL . 'src/js/bolt-bigcommerce.js', array(), BOLT_BIGCOMMERCE_VERSION );
+		wp_enqueue_style( 'bolt-bigcommerce', BOLT_BIGCOMMERCE_PLUGIN_URL . 'src/css/bolt-bigcommerce.css', array(), BOLT_BIGCOMMERCE_VERSION, 'all' );
+		wp_enqueue_script( 'jquery.blockUI', BOLT_BIGCOMMERCE_PLUGIN_URL . 'src/js/jquery-blockui/jquery.blockUI.js', array( 'jquery' ), BOLT_BIGCOMMERCE_VERSION );
+		wp_enqueue_script( 'bolt-bigcommerce', BIGCOMMERCE_PLUGIN_URL . 'src/js/bolt-bigcommerce.js', array(), BOLT_BIGCOMMERCE_VERSION );
 		wp_localize_script( 'bolt-bigcommerce', 'boltajax',
 			array(
 				'url' => admin_url( 'admin-ajax.php' ),

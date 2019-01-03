@@ -5,10 +5,10 @@ green=`tput setaf 2`
 reset=`tput sgr0`
 
 # check if report folder exist.
-if [ -d /home/travis/build/BoltApp/bolt-woocommerce/var/report/ ]
+if [ -d /home/travis/build/BoltApp/bolt-bigcommerce/var/report/ ]
 then
     echo "${red} ### Reports folder present ### ${reset}"
-    cd /home/travis/build/BoltApp/bolt-woocommerce/var/report/
+    cd /home/travis/build/BoltApp/bolt-bigcommerce/var/report/
     for file in ./*; do
         cat "$(basename "$file")"
         echo "\n"
